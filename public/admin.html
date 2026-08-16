@@ -316,13 +316,16 @@
 
     async function populateAudioDevices() {
       try {
+        // Request initial permission to unlock hardware device labels
+        await navigator.mediaDevices.getUserMedia({ audio: true }).then(s => s.getTracks().forEach(t => t.stop())).catch(() => {});
+        
         const devices = await navigator.mediaDevices.enumerateDevices();
         const audioInputs = devices.filter(device => device.kind === 'audioinput');
         audioSourceSelect.innerHTML = '';
         audioInputs.forEach((device, index) => {
           const option = document.createElement('option');
           option.value = device.deviceId;
-          option.text = device.label || `Audio Input ${index + 1}`;
+          option.text = device.label || `Audio Device (${device.deviceId.slice(0, 8)})`;
           audioSourceSelect.appendChild(option);
         });
       } catch (err) {
