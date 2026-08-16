@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spoken Light - Mobile Streamer & Admin Panel</title>
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: #131a29;
+      --accent: #3b82f6;
+      --accent-active: #1d4ed8;
+      --text: #f3f4f6;
+      --muted: #9ca3af;
+      --danger: #ef4444;
+      --success: #10b981;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+    header {
+      width: 100%;
+      max-width: 800px;
+      padding: 24px;
+      box-sizing: border-box;
+      border-bottom: 1px solid #1f293d;
+    }
+    h1 {
+      margin: 0 0 8px 0;
+      font-size: 1.5rem;
+      color: #ffffff;
+    }
+    p.subtitle {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    main {
+      width: 100%;
+      max-width: 800px;
+      padding: 24px;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 20px;
+      border: 1px solid #1f293d;
+    }
+    .status-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      background: #374151;
+      color: var(--muted);
+    }
+    .badge.active {
+      background: rgba(16, 185, 129, 0.2);
+      color: var(--success);
+    }
+    .btn {
+      width: 100%;
+      padding: 16px;
+      border: none;
+      border-radius: 8px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      cursor: pointer;
+      background: var(--accent);
+      color: white;
+      transition: background 0.2s ease;
+    }
+    .btn:hover { background: var(--accent-active); }
+    .btn.stop { background: var(--danger); }
+    .caption-box {
+      min-height: 150px;
+      max-height: 300px;
+      overflow-y: auto;
+      background: #0d131f;
+      border-radius: 8px;
+      padding: 16px;
+      font-size: 1.1rem;
+      line-height: 1.5;
+      color: #e5e7eb;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Spoken Light Live Broadcast Controller</h1>
+    <p class="subtitle">Cloudflare Workers AI Mobile Streamer & Admin Panel</p>
+  </header>
+  <main>
+    <div class="card status-bar">
+      <div>
+        <strong>Status:</strong> <span id="statusText">Idle</span>
+      </div>
+      <div id="statusBadge" class="badge">OFFLINE</div>
+    </div>
+
+    <div class="card">
+      <button id="streamBtn" class="btn">Start Audio Broadcast</button>
+    </div>
+
+    <div class="card">
+      <h2 style="font-size:1.1rem; margin-top:0;">Live Caption Stream</h2>
+      <div id="captionBox" class="caption-box">Captions will display here in real time...</div>
+    </div>
+  </main>
+
+  <script>
+    let isStreaming = false;
+    let mediaRecorder = null;
+    let ws = null;
+
+    const streamBtn = document.getElementById('streamBtn');
+    const statusText = document.getElementById('statusText');
+    const statusBadge = document.getElementById('statusBadge');
+    const captionBox = document.getElementById('captionBox');
+
+    function initWebSocket() {
+      const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      ws = new WebSocket(`${protocol}//${location.host}/api/ws`);
+
+      ws.onopen = () => {
+        console.log('Connected to Durable Object WebSocket');
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === 'caption') {
+            captionBox.innerText = data.text;
+            captionBox.scrollTop = captionBox.scrollHeight;
+          }
+        } catch (e) {
+          console.error('Error parsing WebSocket message:', e);
+        }
+      };
+
+      ws.onclose = () => {
+        setTimeout(initWebSocket, 2000);
+      };
+    }
+
+    async function startStreaming() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+
+        mediaRecorder.ondataavailable = async (event) => {
+          if (event.data.size > 0) {
+            const buffer = await event.data.arrayBuffer();
+            fetch('/api/audio', {
+              method: 'POST',
+              body: buffer
+            }).catch(console.error);
+          }
+        };
+
+        mediaRecorder.start(1000); // 1-second chunks
+        isStreaming = true;
+        streamBtn.innerText = 'Stop Audio Broadcast';
+        streamBtn.classList.add('stop');
+        statusText.innerText = 'Broadcasting Audio';
+        statusBadge.innerText = 'LIVE STREAMING';
+        statusBadge.classList.add('active');
+      } catch (err) {
+        alert('Microphone access failed: ' + err.message);
+      }
+    }
+
+    function stopStreaming() {
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+        mediaRecorder.stream.getTracks().forEach(track => track.stop());
+      }
+      isStreaming = false;
+      streamBtn.innerText = 'Start Audio Broadcast';
+      streamBtn.classList.remove('stop');
+      statusText.innerText = 'Idle';
+      statusBadge.innerText = 'OFFLINE';
+      statusBadge.classList.remove('active');
+    }
+
+    streamBtn.addEventListener('click', () => {
+      if (!isStreaming) {
+        startStreaming();
+      } else {
+        stopStreaming();
+      }
+    });
+
+    initWebSocket();
+  </script>
+</body>
+</html>
