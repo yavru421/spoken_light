@@ -29,9 +29,10 @@ export class CaptionDurableObject {
     if (adminKey === "469airportave_jd_permission") {
       return true;
     }
-    const now = new Date();
-    // Sunday is day 0 in JavaScript Date.getDay()
-    return now.getDay() === 0;
+    
+    // Explicitly calculate day of week in America/Chicago timezone
+    const chicagoDay = new Intl.DateTimeFormat("en-US", { timeZone: "America/Chicago", weekday: "short" }).format(new Date());
+    return chicagoDay === "Sun";
   }
 
   async fetch(request) {
@@ -118,9 +119,9 @@ export class CaptionDurableObject {
   async flushToWhisper() {
     if (this.audioChunks.length === 0) return;
 
-    // Direct day double-check safeguard before triggering Workers AI spend
-    const now = new Date();
-    if (now.getDay() !== 0 && !this.overrideActive) {
+    // Direct day double-check safeguard in Chicago timezone before triggering Workers AI spend
+    const chicagoDay = new Intl.DateTimeFormat("en-US", { timeZone: "America/Chicago", weekday: "short" }).format(new Date());
+    if (chicagoDay !== "Sun" && !this.overrideActive) {
       // If triggered on non-Sunday without explicit admin key, clear queue
       this.audioChunks = [];
       return;

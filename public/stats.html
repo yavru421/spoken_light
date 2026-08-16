@@ -142,7 +142,10 @@
     <div class="card">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
         <h2 style="font-size:1.1rem; margin:0;">Active System Status</h2>
-        <button id="refreshBtn" class="btn" style="padding:6px 12px; font-size:0.8rem;">Refresh Logs</button>
+        <div style="display:flex; gap:8px;">
+          <button id="exportBtn" class="btn" style="padding:6px 12px; font-size:0.8rem; background:var(--accent);">Export Transcript (.txt)</button>
+          <button id="refreshBtn" class="btn" style="padding:6px 12px; font-size:0.8rem;">Refresh Logs</button>
+        </div>
       </div>
       <div style="font-size:0.9rem; line-height:1.6; color:#d1d5db;">
         <div><strong>Last DO Cold Start:</strong> <span id="statLastStarted">--</span></div>
@@ -167,6 +170,8 @@
   </main>
 
   <script>
+    let currentCaptions = [];
+
     async function loadStats() {
       try {
         const res = await fetch('/api/stats');
@@ -178,10 +183,11 @@
         document.getElementById('statLastStarted').innerText = data.lastStartedAt ? new Date(data.lastStartedAt).toLocaleString() : 'N/A';
         document.getElementById('statActiveWs').innerText = data.activeWebSockets || 0;
 
+        currentCaptions = data.recentCaptions || [];
         const tableBody = document.getElementById('captionLogTable');
         tableBody.innerHTML = '';
-        if (data.recentCaptions && data.recentCaptions.length > 0) {
-          data.recentCaptions.forEach(c => {
+        if (currentCaptions.length > 0) {
+          currentCaptions.forEach(c => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
               <td style="white-space:nowrap; color:var(--muted); font-size:0.8rem;">${new Date(c.timestamp).toLocaleTimeString()}</td>
@@ -196,6 +202,21 @@
         console.error('Failed to fetch telemetry stats:', e);
       }
     }
+
+    document.getElementById('exportBtn').addEventListener('click', () => {
+      if (!currentCaptions || currentCaptions.length === 0) {
+        alert('No captions recorded to export.');
+        return;
+      }
+      const text = currentCaptions.map(c => `[${new Date(c.timestamp).toLocaleTimeString()}] ${c.text}`).join('\n\n');
+      const blob = new Blob([text], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Calvary_Baptist_Sermon_Transcript_${new Date().toISOString().slice(0, 10)}.txt`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
 
     document.getElementById('refreshBtn').addEventListener('click', loadStats);
     loadStats();
