@@ -105,12 +105,6 @@ export default {
       return stub.fetch(request);
     }
 
-    // Serve admin.html by default on root path
-    if (url.pathname === "/") {
-      const adminUrl = new URL("/admin.html", request.url);
-      return env.ASSETS.fetch(new Request(adminUrl, request));
-    }
-
     return env.ASSETS.fetch(request);
   }
 };
