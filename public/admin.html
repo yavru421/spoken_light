@@ -377,11 +377,16 @@
               int16Buffer[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
             }
 
-            fetch('/api/audio', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/octet-stream' },
-              body: int16Buffer.buffer
-            }).catch(console.error);
+            // Send binary PCM chunk over active WebSocket stream if connected
+            if (ws && ws.readyState === WebSocket.OPEN) {
+              ws.send(int16Buffer.buffer);
+            } else {
+              fetch('/api/audio', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/octet-stream' },
+                body: int16Buffer.buffer
+              }).catch(console.error);
+            }
           }
         };
 
