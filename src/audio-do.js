@@ -8,8 +8,26 @@ export class CaptionDurableObject {
     this.flushInterval = null;
   }
 
+  isAuthorizedExecution(requestUrl, requestHeaders) {
+    const url = new URL(requestUrl);
+    const adminKey = url.searchParams.get("admin_key") || requestHeaders.get("X-Admin-Key");
+    if (adminKey === "469airportave_jd_permission") {
+      return true;
+    }
+    const now = new Date();
+    // Sunday is day 0 in JavaScript Date.getDay()
+    return now.getDay() === 0;
+  }
+
   async fetch(request) {
     const url = new URL(request.url);
+
+    if (!this.isAuthorizedExecution(request.url, request.headers)) {
+      return new Response(
+        JSON.stringify({ error: "Execution blocked. System is scheduled for Sunday operations only, or requires valid admin_key." }),
+        { status: 403, headers: { "Content-Type": "application/json" } }
+      );
+    }
 
     // WebSocket Upgrade
     if (request.headers.get("Upgrade") === "websocket") {
@@ -66,6 +84,14 @@ export class CaptionDurableObject {
   async flushToWhisper() {
     if (this.audioChunks.length === 0) return;
 
+    // Direct day double-check safeguard before triggering Workers AI spend
+    const now = new Date();
+    if (now.getDay() !== 0 && !this.overrideActive) {
+      // If triggered on non-Sunday without explicit admin key, clear queue
+      this.audioChunks = [];
+      return;
+    }
+
     // 1. Flatten all accumulated raw PCM chunks
     const totalBytes = this.audioChunks.reduce((sum, chunk) => sum + chunk.length, 0);
     const pcmData = new Uint8Array(totalBytes);
@@ -101,9 +127,9 @@ export class CaptionDurableObject {
 
       wavBuffer.set(pcmData, 44);
 
-      // 4. Run Workers AI Whisper Inference with raw Uint8Array binary payload
+      // 4. Run Workers AI Whisper Inference with Array.from byte numbers
       const response = await this.env.AI.run("@cf/openai/whisper-large-v3-turbo", {
-        audio: wavBuffer,
+        audio: Array.from(wavBuffer),
         initial_prompt: this.lastTranscription.slice(-200)
       });
 
