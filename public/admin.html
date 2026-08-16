@@ -286,12 +286,14 @@
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          if (data.type === 'caption') {
+          if (data.type === 'caption' && data.text) {
             captionBox.innerText = data.text;
             captionBox.scrollTop = captionBox.scrollHeight;
           }
         } catch (e) {
-          console.error('Error parsing WebSocket message:', e);
+          if (typeof event.data === 'string' && event.data.length > 0) {
+            captionBox.innerText = event.data;
+          }
         }
       };
 

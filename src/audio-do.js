@@ -87,6 +87,7 @@ export class CaptionDurableObject {
         };
 
         const response = await this.env.AI.run("@cf/openai/whisper-large-v3-turbo", input);
+        console.log("Whisper AI Response:", JSON.stringify(response));
 
         if (response && response.text) {
           const text = response.text.trim();
