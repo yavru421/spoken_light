@@ -302,39 +302,75 @@
       };
     }
 
+    let audioContext = null;
+    let audioStream = null;
+    let scriptProcessor = null;
+
     async function startStreaming() {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+        audioStream = await navigator.mediaDevices.getUserMedia({ audio: { sampleRate: 16000, channelCount: 1 } });
+        audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+        const source = audioContext.createMediaStreamSource(audioStream);
+        
+        // Use ScriptProcessorNode (bufferSize 4096) to collect mono PCM float frames
+        scriptProcessor = audioContext.createScriptProcessor(4096, 1, 1);
+        let pcmBufferAccumulator = [];
 
-        mediaRecorder.ondataavailable = async (event) => {
-          if (event.data.size > 0) {
-            const buffer = await event.data.arrayBuffer();
+        scriptProcessor.onaudioprocess = (e) => {
+          if (!isStreaming) return;
+          const inputData = e.inputBuffer.getChannelData(0);
+          for (let i = 0; i < inputData.length; i++) {
+            pcmBufferAccumulator.push(inputData[i]);
+          }
+
+          // When accumulator holds >= 1 sec of 16kHz audio (16,000 samples)
+          if (pcmBufferAccumulator.length >= 16000) {
+            const samples = pcmBufferAccumulator.slice(0, 16000);
+            pcmBufferAccumulator = pcmBufferAccumulator.slice(16000);
+
+            // Convert Float32 [-1.0, 1.0] to Int16 PCM ArrayBuffer
+            const int16Buffer = new Int16Array(samples.length);
+            for (let i = 0; i < samples.length; i++) {
+              const s = Math.max(-1, Math.min(1, samples[i]));
+              int16Buffer[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+            }
+
             fetch('/api/audio', {
               method: 'POST',
-              body: buffer
+              headers: { 'Content-Type': 'application/octet-stream' },
+              body: int16Buffer.buffer
             }).catch(console.error);
           }
         };
 
-        mediaRecorder.start(1000);
+        source.connect(scriptProcessor);
+        scriptProcessor.connect(audioContext.destination);
+
         isStreaming = true;
         streamBtn.innerText = 'Stop Audio Broadcast';
         streamBtn.classList.add('stop');
-        statusText.innerText = 'Broadcasting Audio';
+        statusText.innerText = 'Broadcasting 16kHz PCM Audio';
         statusBadge.innerText = 'LIVE STREAMING';
         statusBadge.classList.add('active');
       } catch (err) {
-        alert('Microphone access failed: ' + err.message);
+        alert('Microphone PCM capture failed: ' + err.message);
       }
     }
 
     function stopStreaming() {
-      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-        mediaRecorder.stop();
-        mediaRecorder.stream.getTracks().forEach(track => track.stop());
-      }
       isStreaming = false;
+      if (scriptProcessor) {
+        scriptProcessor.disconnect();
+        scriptProcessor = null;
+      }
+      if (audioContext) {
+        audioContext.close();
+        audioContext = null;
+      }
+      if (audioStream) {
+        audioStream.getTracks().forEach(track => track.stop());
+        audioStream = null;
+      }
       streamBtn.innerText = 'Start Audio Broadcast';
       streamBtn.classList.remove('stop');
       statusText.innerText = 'Idle';
