@@ -319,65 +319,47 @@
         console.log('Connected to Durable Object WebSocket');
       };
 
-      let progressInterval = null;
-      let cycleStartTime = 0;
-      let totalBytesSent = 0;
-      let flushCount = 0;
-
-      const cycleTimerText = document.getElementById('cycleTimerText');
-      const cycleProgressBar = document.getElementById('cycleProgressBar');
-      const bufferMeterText = document.getElementById('bufferMeterText');
-      const flushMeterText = document.getElementById('flushMeterText');
-      const latencyMeterText = document.getElementById('latencyMeterText');
-
-      function startProgressBar() {
-        cycleStartTime = Date.now();
-        clearInterval(progressInterval);
-        progressInterval = setInterval(() => {
-          if (!isStreaming) return;
-          const elapsed = (Date.now() - cycleStartTime) % 4000;
-          const pct = (elapsed / 4000) * 100;
-          cycleProgressBar.style.width = `${pct}%`;
-          cycleTimerText.innerText = `${(elapsed / 1000).toFixed(1)}s / 4.0s`;
-
-          if (elapsed < 100) {
-            flushCount++;
-            flushMeterText.innerText = `${flushCount}`;
-          }
-        }, 100);
-      }
-
-      function stopProgressBar() {
-        clearInterval(progressInterval);
-        cycleProgressBar.style.width = '0%';
-        cycleTimerText.innerText = '0.0s / 4.0s';
-        bufferMeterText.innerText = '0 KB';
-        latencyMeterText.innerText = '-- ms';
-      }
-
-      ws.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          if (data.type === 'caption' && data.text) {
-            captionBox.innerText = data.text;
-            captionBox.scrollTop = captionBox.scrollHeight;
-            if (data.timestamp) {
-              const latency = Date.now() - data.timestamp;
-              latencyMeterText.innerText = `${latency} ms`;
-            }
-          }
-        } catch (e) {
-          if (typeof event.data === 'string' && event.data.length > 0) {
-            captionBox.innerText = event.data;
-          }
-        }
-      };
-
       ws.onclose = () => {
         if (localStorage.getItem('spokenlight_admin_token') === 'authenticated') {
           setTimeout(initWebSocket, 2000);
         }
       };
+    }
+
+    let progressInterval = null;
+    let cycleStartTime = 0;
+    let totalBytesSent = 0;
+    let flushCount = 0;
+
+    const cycleTimerText = document.getElementById('cycleTimerText');
+    const cycleProgressBar = document.getElementById('cycleProgressBar');
+    const bufferMeterText = document.getElementById('bufferMeterText');
+    const flushMeterText = document.getElementById('flushMeterText');
+    const latencyMeterText = document.getElementById('latencyMeterText');
+
+    function startProgressBar() {
+      cycleStartTime = Date.now();
+      clearInterval(progressInterval);
+      progressInterval = setInterval(() => {
+        if (!isStreaming) return;
+        const elapsed = (Date.now() - cycleStartTime) % 4000;
+        const pct = (elapsed / 4000) * 100;
+        if (cycleProgressBar) cycleProgressBar.style.width = `${pct}%`;
+        if (cycleTimerText) cycleTimerText.innerText = `${(elapsed / 1000).toFixed(1)}s / 4.0s`;
+
+        if (elapsed < 100 && flushMeterText) {
+          flushCount++;
+          flushMeterText.innerText = `${flushCount}`;
+        }
+      }, 100);
+    }
+
+    function stopProgressBar() {
+      clearInterval(progressInterval);
+      if (cycleProgressBar) cycleProgressBar.style.width = '0%';
+      if (cycleTimerText) cycleTimerText.innerText = '0.0s / 4.0s';
+      if (bufferMeterText) bufferMeterText.innerText = '0 KB';
+      if (latencyMeterText) latencyMeterText.innerText = '-- ms';
     }
 
     const audioSourceSelect = document.getElementById('audioSourceSelect');

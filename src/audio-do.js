@@ -101,9 +101,9 @@ export class CaptionDurableObject {
 
       wavBuffer.set(pcmData, 44);
 
-      // 4. Run Workers AI Whisper Inference with Array.from payload
+      // 4. Run Workers AI Whisper Inference with raw Uint8Array binary payload
       const response = await this.env.AI.run("@cf/openai/whisper-large-v3-turbo", {
-        audio: Array.from(wavBuffer),
+        audio: wavBuffer,
         initial_prompt: this.lastTranscription.slice(-200)
       });
 
