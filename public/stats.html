@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spoken Light - Usage & Telemetry Stats</title>
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: #131a29;
+      --accent: #3b82f6;
+      --text: #f3f4f6;
+      --muted: #9ca3af;
+      --border: #1f293d;
+      --success: #10b981;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+    header {
+      width: 100%;
+      max-width: 900px;
+      padding: 24px;
+      box-sizing: border-box;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    h1 {
+      margin: 0 0 4px 0;
+      font-size: 1.5rem;
+      color: #ffffff;
+    }
+    p.subtitle {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+    main {
+      width: 100%;
+      max-width: 900px;
+      padding: 24px;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 20px;
+      border: 1px solid var(--border);
+    }
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+    @media (max-width: 600px) {
+      .grid-3 { grid-template-columns: 1fr; }
+    }
+    .metric-card {
+      background: #0b101b;
+      padding: 16px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      text-align: center;
+    }
+    .metric-val {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--accent);
+      margin-top: 4px;
+    }
+    .btn {
+      padding: 8px 16px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      background: #1e293b;
+      color: var(--text);
+      text-decoration: none;
+      transition: background 0.2s ease;
+    }
+    .btn:hover { background: #334155; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+    }
+    th, td {
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.9rem;
+    }
+    th {
+      color: var(--muted);
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Spoken Light</h1>
+      <p class="subtitle">Durable Object Telemetry & Usage Logs</p>
+    </div>
+    <div style="display:flex; gap:10px;">
+      <a href="/admin.html" class="btn">Admin Panel</a>
+      <a href="/about.html" class="btn">About</a>
+    </div>
+  </header>
+
+  <main>
+    <div class="card grid-3">
+      <div class="metric-card">
+        <div style="color:var(--muted); font-size:0.85rem;">Total DO Instantiations</div>
+        <div id="statStarts" class="metric-val">--</div>
+      </div>
+      <div class="metric-card">
+        <div style="color:var(--muted); font-size:0.85rem;">Total HTTP / WS Requests</div>
+        <div id="statRequests" class="metric-val">--</div>
+      </div>
+      <div class="metric-card">
+        <div style="color:var(--muted); font-size:0.85rem;">Workers AI Whisper Flushes</div>
+        <div id="statFlushes" class="metric-val">--</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h2 style="font-size:1.1rem; margin:0;">Active System Status</h2>
+        <button id="refreshBtn" class="btn" style="padding:6px 12px; font-size:0.8rem;">Refresh Logs</button>
+      </div>
+      <div style="font-size:0.9rem; line-height:1.6; color:#d1d5db;">
+        <div><strong>Last DO Cold Start:</strong> <span id="statLastStarted">--</span></div>
+        <div><strong>Active Live WebSockets:</strong> <span id="statActiveWs">--</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 style="font-size:1.1rem; margin-top:0;">Recent Live Transcriptions Log</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Timestamp</th>
+            <th>Transcribed Caption Text</th>
+          </tr>
+        </thead>
+        <tbody id="captionLogTable">
+          <tr><td colspan="2" style="color:var(--muted);">Loading telemetry logs...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <script>
+    async function loadStats() {
+      try {
+        const res = await fetch('/api/stats');
+        const data = await res.json();
+
+        document.getElementById('statStarts').innerText = data.totalStarts || 0;
+        document.getElementById('statRequests').innerText = data.totalRequests || 0;
+        document.getElementById('statFlushes').innerText = data.totalAiFlushes || 0;
+        document.getElementById('statLastStarted').innerText = data.lastStartedAt ? new Date(data.lastStartedAt).toLocaleString() : 'N/A';
+        document.getElementById('statActiveWs').innerText = data.activeWebSockets || 0;
+
+        const tableBody = document.getElementById('captionLogTable');
+        tableBody.innerHTML = '';
+        if (data.recentCaptions && data.recentCaptions.length > 0) {
+          data.recentCaptions.forEach(c => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td style="white-space:nowrap; color:var(--muted); font-size:0.8rem;">${new Date(c.timestamp).toLocaleTimeString()}</td>
+              <td>${c.text}</td>
+            `;
+            tableBody.appendChild(tr);
+          });
+        } else {
+          tableBody.innerHTML = `<tr><td colspan="2" style="color:var(--muted);">No transcriptions recorded in persistent state yet.</td></tr>`;
+        }
+      } catch (e) {
+        console.error('Failed to fetch telemetry stats:', e);
+      }
+    }
+
+    document.getElementById('refreshBtn').addEventListener('click', loadStats);
+    loadStats();
+    setInterval(loadStats, 5000);
+  </script>
+</body>
+</html>

@@ -6,6 +6,21 @@ export class CaptionDurableObject {
     this.audioChunks = [];
     this.lastTranscription = "";
     this.flushInterval = null;
+
+    // Initialize or restore persistent telemetry state
+    this.state.blockConcurrencyWhile(async () => {
+      this.totalStarts = (await this.state.storage.get("totalStarts")) || 0;
+      this.totalRequests = (await this.state.storage.get("totalRequests")) || 0;
+      this.totalAiFlushes = (await this.state.storage.get("totalAiFlushes")) || 0;
+      this.lastStartedAt = (await this.state.storage.get("lastStartedAt")) || null;
+      this.recentCaptions = (await this.state.storage.get("recentCaptions")) || [];
+
+      // Increment DO instantiation count
+      this.totalStarts++;
+      this.lastStartedAt = new Date().toISOString();
+      await this.state.storage.put("totalStarts", this.totalStarts);
+      await this.state.storage.put("lastStartedAt", this.lastStartedAt);
+    });
   }
 
   isAuthorizedExecution(requestUrl, requestHeaders) {
@@ -21,6 +36,25 @@ export class CaptionDurableObject {
 
   async fetch(request) {
     const url = new URL(request.url);
+
+    // Track total incoming request counter
+    this.totalRequests++;
+    await this.state.storage.put("totalRequests", this.totalRequests);
+
+    // Return Telemetry Stats Endpoint
+    if (url.pathname === "/api/stats") {
+      const stats = {
+        totalStarts: this.totalStarts,
+        totalRequests: this.totalRequests,
+        totalAiFlushes: this.totalAiFlushes,
+        lastStartedAt: this.lastStartedAt,
+        activeWebSockets: this.sessions.size,
+        recentCaptions: this.recentCaptions
+      };
+      return new Response(JSON.stringify(stats, null, 2), {
+        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
+      });
+    }
 
     if (!this.isAuthorizedExecution(request.url, request.headers)) {
       return new Response(
@@ -133,10 +167,19 @@ export class CaptionDurableObject {
         initial_prompt: this.lastTranscription.slice(-200)
       });
 
+      this.totalAiFlushes++;
+      await this.state.storage.put("totalAiFlushes", this.totalAiFlushes);
+
       if (response && response.text) {
         const captionText = response.text.trim();
         if (captionText.length > 0) {
           this.lastTranscription = captionText;
+
+          // Maintain rolling recent 10 captions in persistent storage
+          this.recentCaptions.unshift({ text: captionText, timestamp: new Date().toISOString() });
+          if (this.recentCaptions.length > 10) this.recentCaptions.pop();
+          await this.state.storage.put("recentCaptions", this.recentCaptions);
+
           const payload = JSON.stringify({
             type: "caption",
             text: captionText,
@@ -162,7 +205,7 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
-    // Route audio & websocket traffic to singleton Durable Object instance
+    // Route audio, websocket, and stats traffic to singleton Durable Object instance
     if (url.pathname.startsWith("/api/") || request.headers.get("Upgrade") === "websocket") {
       const id = env.CAPTION_DO.idFromName("global_caption_room");
       const stub = env.CAPTION_DO.get(id);
