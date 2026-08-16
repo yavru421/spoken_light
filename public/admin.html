@@ -188,7 +188,15 @@
       <div class="card grid-2">
         <div>
           <h2 style="font-size:1.1rem; margin-top:0;">Audio Stream Dispatcher</h2>
-          <p style="color:var(--muted); font-size:0.85rem;">Capture client microphone & dispatch sliding-window PCM audio chunks to Workers AI Whisper DO.</p>
+          <p style="color:var(--muted); font-size:0.85rem;">Capture input device audio (OBS Cable / Line In / Mic) & dispatch 16kHz PCM chunks to Durable Object.</p>
+          
+          <div class="form-group">
+            <label for="audioSourceSelect">Audio Input Source</label>
+            <select id="audioSourceSelect">
+              <option value="">Default Input Device</option>
+            </select>
+          </div>
+
           <button id="streamBtn" class="btn">Start Audio Broadcast</button>
         </div>
         <div>
@@ -304,13 +312,34 @@
       };
     }
 
+    const audioSourceSelect = document.getElementById('audioSourceSelect');
+
+    async function populateAudioDevices() {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const audioInputs = devices.filter(device => device.kind === 'audioinput');
+        audioSourceSelect.innerHTML = '';
+        audioInputs.forEach((device, index) => {
+          const option = document.createElement('option');
+          option.value = device.deviceId;
+          option.text = device.label || `Audio Input ${index + 1}`;
+          audioSourceSelect.appendChild(option);
+        });
+      } catch (err) {
+        console.error('Error enumerating audio devices:', err);
+      }
+    }
+
     let audioContext = null;
     let audioStream = null;
     let scriptProcessor = null;
 
     async function startStreaming() {
       try {
-        audioStream = await navigator.mediaDevices.getUserMedia({ audio: { sampleRate: 16000, channelCount: 1 } });
+        const selectedDeviceId = audioSourceSelect.value;
+        const audioConstraints = selectedDeviceId ? { deviceId: { exact: selectedDeviceId }, sampleRate: 16000, channelCount: 1 } : { sampleRate: 16000, channelCount: 1 };
+
+        audioStream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
         audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
         const source = audioContext.createMediaStreamSource(audioStream);
         
@@ -393,6 +422,8 @@
     });
 
     checkAuth();
+    populateAudioDevices();
+    navigator.mediaDevices.ondevicechange = populateAudioDevices;
   </script>
 </body>
 </html>
