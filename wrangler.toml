@@ -1,9 +1,14 @@
 name = "spoken_light"
 main = "src/audio-do.js"
 compatibility_date = "2024-05-01"
+workers_dev = true
+
+routes = [
+  { pattern = "spokenlight.dondlingergc.com", custom_domain = true }
+]
 
 [assets]
-directory = "./public"
+directory = "public"
 
 [[durable_objects.bindings]]
 name = "CAPTION_DO"

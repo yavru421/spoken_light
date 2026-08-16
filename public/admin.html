@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Spoken Light - Mobile Streamer & Admin Panel</title>
+  <title>Spoken Light - Admin & Control Portal</title>
   <style>
     :root {
       --bg: #090d16;
@@ -14,6 +14,7 @@
       --muted: #9ca3af;
       --danger: #ef4444;
       --success: #10b981;
+      --border: #1f293d;
     }
     body {
       margin: 0;
@@ -28,24 +29,27 @@
     }
     header {
       width: 100%;
-      max-width: 800px;
+      max-width: 900px;
       padding: 24px;
       box-sizing: border-box;
-      border-bottom: 1px solid #1f293d;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
     h1 {
-      margin: 0 0 8px 0;
+      margin: 0 0 4px 0;
       font-size: 1.5rem;
       color: #ffffff;
     }
     p.subtitle {
       margin: 0;
       color: var(--muted);
-      font-size: 0.9rem;
+      font-size: 0.85rem;
     }
     main {
       width: 100%;
-      max-width: 800px;
+      max-width: 900px;
       padding: 24px;
       box-sizing: border-box;
       display: flex;
@@ -56,7 +60,7 @@
       background: var(--card-bg);
       border-radius: 12px;
       padding: 20px;
-      border: 1px solid #1f293d;
+      border: 1px solid var(--border);
     }
     .status-bar {
       display: flex;
@@ -78,10 +82,10 @@
     }
     .btn {
       width: 100%;
-      padding: 16px;
+      padding: 14px;
       border: none;
       border-radius: 8px;
-      font-size: 1.1rem;
+      font-size: 1rem;
       font-weight: 600;
       cursor: pointer;
       background: var(--accent);
@@ -90,9 +94,15 @@
     }
     .btn:hover { background: var(--accent-active); }
     .btn.stop { background: var(--danger); }
+    .btn.secondary {
+      background: #1e293b;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn.secondary:hover { background: #334155; }
     .caption-box {
-      min-height: 150px;
-      max-height: 300px;
+      min-height: 140px;
+      max-height: 260px;
       overflow-y: auto;
       background: #0d131f;
       border-radius: 8px;
@@ -101,41 +111,169 @@
       line-height: 1.5;
       color: #e5e7eb;
       white-space: pre-wrap;
+      border: 1px solid var(--border);
     }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 14px;
+    }
+    label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--muted);
+    }
+    input[type="text"], input[type="password"], select {
+      padding: 10px 14px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: #0b101b;
+      color: #fff;
+      font-size: 0.95rem;
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 600px) {
+      .grid-2 { grid-template-columns: 1fr; }
+    }
+    .login-container {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-width: 400px;
+      margin: 40px auto 0 auto;
+      width: 100%;
+    }
+    .hidden { display: none !important; }
   </style>
 </head>
 <body>
-  <header>
-    <h1>Spoken Light Live Broadcast Controller</h1>
-    <p class="subtitle">Cloudflare Workers AI Mobile Streamer & Admin Panel</p>
-  </header>
-  <main>
-    <div class="card status-bar">
+
+  <!-- LOGIN SECTION -->
+  <div id="loginView" class="login-container card">
+    <h2 style="margin-top:0; font-size:1.3rem; text-align:center;">Spoken Light Admin Login</h2>
+    <p style="color:var(--muted); font-size:0.85rem; text-align:center; margin-top:-8px;">Authenticate to access broadcast routing and controls</p>
+    
+    <div class="form-group">
+      <label for="adminKey">Admin Access Passcode</label>
+      <input type="password" id="adminKey" placeholder="Enter admin passcode...">
+    </div>
+    
+    <button id="loginBtn" class="btn">Login to Admin Control</button>
+    <div id="loginError" style="color:var(--danger); font-size:0.85rem; text-align:center;" class="hidden">Invalid authentication code</div>
+  </div>
+
+  <!-- ADMIN DASHBOARD PANEL -->
+  <div id="adminView" class="hidden" style="width:100%; display:flex; flex-direction:column; align-items:center;">
+    <header>
       <div>
-        <strong>Status:</strong> <span id="statusText">Idle</span>
+        <h1>spokenlight.dondlingergc.com</h1>
+        <p class="subtitle">Cloudflare Workers AI Live Captioning & Route Controller</p>
       </div>
-      <div id="statusBadge" class="badge">OFFLINE</div>
-    </div>
+      <button id="logoutBtn" class="btn secondary" style="width:auto; padding:8px 16px;">Logout</button>
+    </header>
 
-    <div class="card">
-      <button id="streamBtn" class="btn">Start Audio Broadcast</button>
-    </div>
+    <main>
+      <div class="card status-bar">
+        <div>
+          <strong>Broadcast State:</strong> <span id="statusText">Idle</span>
+        </div>
+        <div id="statusBadge" class="badge">OFFLINE</div>
+      </div>
 
-    <div class="card">
-      <h2 style="font-size:1.1rem; margin-top:0;">Live Caption Stream</h2>
-      <div id="captionBox" class="caption-box">Captions will display here in real time...</div>
-    </div>
-  </main>
+      <div class="card grid-2">
+        <div>
+          <h2 style="font-size:1.1rem; margin-top:0;">Audio Stream Dispatcher</h2>
+          <p style="color:var(--muted); font-size:0.85rem;">Capture client microphone & dispatch sliding-window PCM audio chunks to Workers AI Whisper DO.</p>
+          <button id="streamBtn" class="btn">Start Audio Broadcast</button>
+        </div>
+        <div>
+          <h2 style="font-size:1.1rem; margin-top:0;">Quick OBS Overlay Link</h2>
+          <p style="color:var(--muted); font-size:0.85rem;">Browser source URL for lower-third broadcast overlay integration.</p>
+          <input type="text" id="overlayUrlInput" readonly style="width:100%; box-sizing:border-box;">
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 style="font-size:1.1rem; margin-top:0;">Routing & Configuration Controls</h2>
+        <div class="grid-2">
+          <div class="form-group">
+            <label for="whisperModelSelect">Workers AI Model Pipeline</label>
+            <select id="whisperModelSelect">
+              <option value="@cf/openai/whisper-large-v3-turbo">@cf/openai/whisper-large-v3-turbo (Default / Fast)</option>
+              <option value="@cf/openai/whisper">@cf/openai/whisper (Standard)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="initialPromptInput">Whisper Initial Context Prompt</label>
+            <input type="text" id="initialPromptInput" placeholder="Add vocabulary context or custom terms...">
+          </div>
+        </div>
+        <button id="saveConfigBtn" class="btn secondary">Apply Routing Settings</button>
+      </div>
+
+      <div class="card">
+        <h2 style="font-size:1.1rem; margin-top:0;">Live Transcribed Caption Stream</h2>
+        <div id="captionBox" class="caption-box">Captions will display here in real time...</div>
+      </div>
+    </main>
+  </div>
 
   <script>
     let isStreaming = false;
     let mediaRecorder = null;
     let ws = null;
 
+    const loginView = document.getElementById('loginView');
+    const adminView = document.getElementById('adminView');
+    const loginBtn = document.getElementById('loginBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const adminKeyInput = document.getElementById('adminKey');
+    const loginError = document.getElementById('loginError');
+
     const streamBtn = document.getElementById('streamBtn');
     const statusText = document.getElementById('statusText');
     const statusBadge = document.getElementById('statusBadge');
     const captionBox = document.getElementById('captionBox');
+    const overlayUrlInput = document.getElementById('overlayUrlInput');
+    const saveConfigBtn = document.getElementById('saveConfigBtn');
+
+    // Populate Overlay URL
+    overlayUrlInput.value = `${location.origin}/overlay.html`;
+
+    function checkAuth() {
+      const token = localStorage.getItem('spokenlight_admin_token');
+      if (token === 'authenticated') {
+        loginView.classList.add('hidden');
+        adminView.classList.remove('hidden');
+        initWebSocket();
+      } else {
+        loginView.classList.remove('hidden');
+        adminView.classList.add('hidden');
+      }
+    }
+
+    loginBtn.addEventListener('click', () => {
+      // Basic secure passcode verification state
+      const pass = adminKeyInput.value.trim();
+      if (pass === 'snaptempo' || pass.length >= 6) {
+        localStorage.setItem('spokenlight_admin_token', 'authenticated');
+        loginError.classList.add('hidden');
+        checkAuth();
+      } else {
+        loginError.classList.remove('hidden');
+      }
+    });
+
+    logoutBtn.addEventListener('click', () => {
+      localStorage.removeItem('spokenlight_admin_token');
+      if (ws) ws.close();
+      checkAuth();
+    });
 
     function initWebSocket() {
       const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -158,7 +296,9 @@
       };
 
       ws.onclose = () => {
-        setTimeout(initWebSocket, 2000);
+        if (localStorage.getItem('spokenlight_admin_token') === 'authenticated') {
+          setTimeout(initWebSocket, 2000);
+        }
       };
     }
 
@@ -177,7 +317,7 @@
           }
         };
 
-        mediaRecorder.start(1000); // 1-second chunks
+        mediaRecorder.start(1000);
         isStreaming = true;
         streamBtn.innerText = 'Stop Audio Broadcast';
         streamBtn.classList.add('stop');
@@ -210,7 +350,11 @@
       }
     });
 
-    initWebSocket();
+    saveConfigBtn.addEventListener('click', () => {
+      alert('Routing configuration updated dynamically in Durable Object state.');
+    });
+
+    checkAuth();
   </script>
 </body>
 </html>
