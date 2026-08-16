@@ -82,7 +82,7 @@ export class CaptionDurableObject {
         wavBuffer.set(this.slidingBuffer, 44);
 
         const input = {
-          audio: Array.from(wavBuffer),
+          audio: wavBuffer,
           initial_prompt: this.contextPrompt
         };
 
