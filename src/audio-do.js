@@ -123,7 +123,78 @@ export class CaptionDurableObject {
   }
 
   async webSocketMessage(ws, message) {
-    // Handle WebSocket inbound messages if needed (e.g. control commands)
+    // Check if message is binary audio data (ArrayBuffer or Uint8Array)
+    if (message instanceof ArrayBuffer || message instanceof Uint8Array || ArrayBuffer.isView(message)) {
+      const chunk = new Uint8Array(message);
+      
+      // Append chunk to sliding window buffer
+      const newBuffer = new Uint8Array(this.slidingBuffer.length + chunk.length);
+      newBuffer.set(this.slidingBuffer, 0);
+      newBuffer.set(chunk, this.slidingBuffer.length);
+      this.slidingBuffer = newBuffer;
+
+      // Clamp sliding window buffer to max threshold
+      if (this.slidingBuffer.length > this.maxBufferSize) {
+        this.slidingBuffer = this.slidingBuffer.slice(this.slidingBuffer.length - this.maxBufferSize);
+      }
+
+      // Execute Workers AI Whisper Inference
+      try {
+        const numChannels = 1;
+        const sampleRate = 16000;
+        const bitsPerSample = 16;
+        const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
+        const blockAlign = numChannels * (bitsPerSample / 8);
+        const dataSize = this.slidingBuffer.length;
+        const header = new ArrayBuffer(44);
+        const view = new DataView(header);
+
+        view.setUint32(0, 0x52494646, false); // "RIFF"
+        view.setUint32(4, 36 + dataSize, true);
+        view.setUint32(8, 0x57415645, false); // "WAVE"
+        view.setUint32(12, 0x666d7420, false); // "fmt "
+        view.setUint32(16, 16, true);
+        view.setUint16(20, 1, true);
+        view.setUint16(22, numChannels, true);
+        view.setUint32(24, sampleRate, true);
+        view.setUint32(28, byteRate, true);
+        view.setUint16(32, blockAlign, true);
+        view.setUint16(34, bitsPerSample, true);
+        view.setUint32(36, 0x64617461, false); // "data"
+        view.setUint32(40, dataSize, true);
+
+        const wavBuffer = new Uint8Array(44 + dataSize);
+        wavBuffer.set(new Uint8Array(header), 0);
+        wavBuffer.set(this.slidingBuffer, 44);
+
+        const response = await this.env.AI.run("@cf/openai/whisper-large-v3-turbo", {
+          audio: wavBuffer,
+          initial_prompt: this.contextPrompt
+        });
+
+        if (response && response.text) {
+          const text = response.text.trim();
+          if (text.length > 0) {
+            this.contextPrompt = text.slice(-200);
+            const payload = JSON.stringify({
+              type: "caption",
+              text: text,
+              timestamp: Date.now()
+            });
+
+            for (const clientWs of this.sessions) {
+              try {
+                clientWs.send(payload);
+              } catch (e) {
+                this.sessions.delete(clientWs);
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Whisper Workers AI WebSocket Stream Error:", err);
+      }
+    }
   }
 
   async webSocketClose(ws, code, reason, wasClean) {
