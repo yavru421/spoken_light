@@ -40,8 +40,49 @@ export class CaptionDurableObject {
 
       // Execute Workers AI Whisper Inference
       try {
+        // Construct valid RIFF WAV header for 16kHz 16-bit Mono PCM
+        const numChannels = 1;
+        const sampleRate = 16000;
+        const bitsPerSample = 16;
+        const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
+        const blockAlign = numChannels * (bitsPerSample / 8);
+        const dataSize = this.slidingBuffer.length;
+        const header = new ArrayBuffer(44);
+        const view = new DataView(header);
+
+        /* RIFF identifier */
+        view.setUint32(0, 0x52494646, false); // "RIFF"
+        /* file length */
+        view.setUint32(4, 36 + dataSize, true);
+        /* RIFF type */
+        view.setUint32(8, 0x57415645, false); // "WAVE"
+        /* format chunk identifier */
+        view.setUint32(12, 0x666d7420, false); // "fmt "
+        /* format chunk length */
+        view.setUint32(16, 16, true);
+        /* sample format (raw PCM) */
+        view.setUint16(20, 1, true);
+        /* channel count */
+        view.setUint16(22, numChannels, true);
+        /* sample rate */
+        view.setUint32(24, sampleRate, true);
+        /* byte rate */
+        view.setUint32(28, byteRate, true);
+        /* block align */
+        view.setUint16(32, blockAlign, true);
+        /* bits per sample */
+        view.setUint16(34, bitsPerSample, true);
+        /* data chunk identifier */
+        view.setUint32(36, 0x64617461, false); // "data"
+        /* data chunk length */
+        view.setUint32(40, dataSize, true);
+
+        const wavBuffer = new Uint8Array(44 + dataSize);
+        wavBuffer.set(new Uint8Array(header), 0);
+        wavBuffer.set(this.slidingBuffer, 44);
+
         const input = {
-          audio: Array.from(this.slidingBuffer),
+          audio: Array.from(wavBuffer),
           initial_prompt: this.contextPrompt
         };
 
