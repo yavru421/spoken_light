@@ -350,11 +350,19 @@
         scriptProcessor = audioContext.createScriptProcessor(4096, 1, 1);
         let pcmBufferAccumulator = [];
 
+        const nativeSampleRate = audioContext.sampleRate;
+
         scriptProcessor.onaudioprocess = (e) => {
           if (!isStreaming) return;
           const inputData = e.inputBuffer.getChannelData(0);
-          for (let i = 0; i < inputData.length; i++) {
-            pcmBufferAccumulator.push(inputData[i]);
+          
+          // Downsample native hardware rate (e.g. 48kHz or 44.1kHz) to target 16kHz
+          const sampleRatio = nativeSampleRate / 16000;
+          const targetLength = Math.floor(inputData.length / sampleRatio);
+
+          for (let i = 0; i < targetLength; i++) {
+            const origIndex = Math.floor(i * sampleRatio);
+            pcmBufferAccumulator.push(inputData[origIndex]);
           }
 
           // When accumulator holds >= 1 sec of 16kHz audio (16,000 samples)
