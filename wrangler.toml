@@ -20,3 +20,8 @@ new_sqlite_classes = ["CaptionDurableObject"]
 
 [ai]
 binding = "AI"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "spoken_light_lexicon"
+database_id = "e96a4638-add4-43a6-8a3e-e1764b1feef5"

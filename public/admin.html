@@ -3,499 +3,493 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Spoken Light - Admin & Control Portal</title>
+  <title>Spoken Light - Sound Booth</title>
   <style>
     :root {
       --bg: #090d16;
-      --card-bg: #131a29;
+      --card-bg: #111827;
       --accent: #3b82f6;
-      --accent-active: #1d4ed8;
-      --text: #f3f4f6;
-      --muted: #9ca3af;
-      --danger: #ef4444;
-      --success: #10b981;
-      --border: #1f293d;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --danger: #dc2626;
+      --success: #16a34a;
+      --warning: #d97706;
+      --border: #1f2937;
     }
+    * { box-sizing: border-box; }
     body {
       margin: 0;
-      padding: 0;
-      background-color: var(--bg);
+      padding: 32px 16px;
+      background: var(--bg);
       color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       display: flex;
       flex-direction: column;
       align-items: center;
       min-height: 100vh;
     }
-    header {
+    .container {
       width: 100%;
-      max-width: 900px;
-      padding: 24px;
-      box-sizing: border-box;
-      border-bottom: 1px solid var(--border);
+      max-width: 760px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+    .header-bar {
       display: flex;
       justify-content: space-between;
       align-items: center;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border);
     }
-    h1 {
-      margin: 0 0 4px 0;
-      font-size: 1.5rem;
-      color: #ffffff;
-    }
-    p.subtitle {
+    .title-group h1 {
       margin: 0;
-      color: var(--muted);
-      font-size: 0.85rem;
+      font-size: 1.35rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
-    main {
-      width: 100%;
-      max-width: 900px;
+    .card {
+      background: var(--card-bg);
+      border-radius: 14px;
       padding: 24px;
-      box-sizing: border-box;
+      border: 1px solid var(--border);
       display: flex;
       flex-direction: column;
       gap: 20px;
     }
-    .card {
-      background: var(--card-bg);
-      border-radius: 12px;
-      padding: 20px;
-      border: 1px solid var(--border);
-    }
-    .status-bar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .badge {
-      display: inline-block;
-      padding: 4px 10px;
-      border-radius: 9999px;
-      font-size: 0.8rem;
-      font-weight: 600;
-      background: #374151;
-      color: var(--muted);
-    }
-    .badge.active {
-      background: rgba(16, 185, 129, 0.2);
-      color: var(--success);
-    }
-    .btn {
+    .btn-main {
       width: 100%;
-      padding: 14px;
+      padding: 22px;
+      font-size: 1.35rem;
+      font-weight: 800;
       border: none;
-      border-radius: 8px;
-      font-size: 1rem;
-      font-weight: 600;
+      border-radius: 10px;
       cursor: pointer;
-      background: var(--accent);
       color: white;
-      transition: background 0.2s ease;
+      background: var(--success);
+      box-shadow: 0 4px 20px rgba(22, 163, 74, 0.4);
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      user-select: none;
     }
-    .btn:hover { background: var(--accent-active); }
-    .btn.stop { background: var(--danger); }
-    .btn.secondary {
-      background: #1e293b;
-      color: var(--text);
-      border: 1px solid var(--border);
+    .btn-main:hover { filter: brightness(1.1); }
+    .btn-main.running {
+      background: var(--danger);
+      box-shadow: 0 4px 20px rgba(220, 38, 38, 0.4);
     }
-    .btn.secondary:hover { background: #334155; }
-    .caption-box {
-      min-height: 140px;
-      max-height: 260px;
-      overflow-y: auto;
-      background: #0d131f;
-      border-radius: 8px;
+    .btn-worship {
       padding: 16px;
       font-size: 1.1rem;
-      line-height: 1.5;
-      color: #e5e7eb;
-      white-space: pre-wrap;
-      border: 1px solid var(--border);
+      font-weight: 700;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      color: white;
+      background: #4f46e5;
+      transition: all 0.15s ease;
+      display: none;
     }
-    .form-group {
+    .btn-worship.muted {
+      background: var(--warning);
+      box-shadow: 0 4px 16px rgba(217, 119, 6, 0.4);
+    }
+    .teleprompter-box {
+      background: #050811;
+      border: 2px solid #3b82f6;
+      border-radius: 12px;
+      padding: 28px 24px;
+      min-height: 160px;
       display: flex;
       flex-direction: column;
-      gap: 6px;
-      margin-bottom: 14px;
+      justify-content: center;
+      box-shadow: 0 0 24px rgba(59, 130, 246, 0.15);
     }
-    label {
-      font-size: 0.85rem;
-      font-weight: 600;
-      color: var(--muted);
+    .teleprompter-label {
+      font-size: 0.75rem;
+      font-weight: 800;
+      color: #60a5fa;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
     }
-    input[type="text"], input[type="password"], select {
-      padding: 10px 14px;
-      border-radius: 6px;
-      border: 1px solid var(--border);
-      background: #0b101b;
+    .teleprompter-text {
+      font-size: 1.95rem;
+      font-weight: 800;
+      color: #ffffff;
+      line-height: 1.35;
+      transition: color 0.2s ease;
+    }
+    .vu-meter-bar {
+      height: 8px;
+      background: #1f2937;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .vu-fill {
+      height: 100%;
+      width: 0%;
+      background: #22c55e;
+      transition: width 0.05s ease-out;
+    }
+    select {
+      background: #0a0f1d;
       color: #fff;
+      border: 1px solid var(--border);
+      padding: 10px 14px;
+      border-radius: 8px;
       font-size: 0.95rem;
-    }
-    .grid-2 {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-    }
-    @media (max-width: 600px) {
-      .grid-2 { grid-template-columns: 1fr; }
-    }
-    .login-container {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      max-width: 400px;
-      margin: 40px auto 0 auto;
       width: 100%;
     }
-    .hidden { display: none !important; }
+    .btn-copy {
+      background: #1f2937;
+      color: #e2e8f0;
+      border: 1px solid #374151;
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-copy:hover { background: #374151; }
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      background: #16a34a;
+      color: white;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 0.9rem;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+      z-index: 999;
+      display: none;
+    }
   </style>
 </head>
 <body>
 
-  <!-- LOGIN SECTION -->
-  <div id="loginView" class="login-container card">
-    <h2 style="margin-top:0; font-size:1.3rem; text-align:center;">Spoken Light Admin Login</h2>
-    <p style="color:var(--muted); font-size:0.85rem; text-align:center; margin-top:-8px;">Authenticate to access broadcast routing and controls</p>
-    
-    <div class="form-group">
-      <label for="adminKey">Admin Access Passcode</label>
-      <input type="password" id="adminKey" placeholder="Enter admin passcode...">
+  <div class="container">
+    <div class="header-bar">
+      <div class="title-group">
+        <h1>🎙️ Spoken Light <span style="font-size:0.75rem; background:#16a34a; padding:2px 8px; border-radius:6px; font-weight:800;">v3.0</span></h1>
+        <div style="font-size:0.8rem; color:var(--muted); margin-top:2px;">Calvary Baptist Church • Live Broadcast Captions</div>
+      </div>
+      <button id="copyObsBtn" class="btn-copy">📋 Copy OBS Overlay Link</button>
     </div>
-    
-    <button id="loginBtn" class="btn">Login to Admin Control</button>
-    <div id="loginError" style="color:var(--danger); font-size:0.85rem; text-align:center;" class="hidden">Invalid authentication code</div>
+
+    <!-- MAIN CONTROL CARD -->
+    <div class="card">
+      <div style="display:flex; gap:12px; flex-wrap:wrap;">
+        <button id="mainToggleBtn" class="btn-main" style="flex:1; min-width:260px;">
+          ▶ START LIVE CAPTIONS
+        </button>
+        <button id="modeToggleBtn" class="btn-worship" style="flex:1; min-width:260px;">
+          🎙️ SERMON MODE (ACTIVE)
+        </button>
+      </div>
+
+      <div id="modeHint" style="font-size:0.82rem; color:var(--muted); text-align:center; display:none;">
+        <span style="color:#f8fafc; font-weight:700;">Sound Booth Shortcut:</span> Press <kbd style="background:#1f2937; padding:2px 6px; border-radius:4px; border:1px solid #374151;">Spacebar</kbd> to toggle between <b>Sermon</b> and <b>Worship Songs Mute</b>.
+      </div>
+
+      <!-- LIVE TELEPROMPTER -->
+      <div class="teleprompter-box">
+        <div class="teleprompter-label">Live Broadcast Subtitle (Streaming to OBS)</div>
+        <div id="teleprompterStack" style="display:flex; flex-direction:column; gap:8px;">
+          <div id="adminLineTop" style="color:rgba(203,213,225,0.35); font-size:1.15rem; font-weight:500; line-height:1.35; display:none;"></div>
+          <div id="adminLineMid" style="color:rgba(226,232,240,0.70); font-size:1.45rem; font-weight:600; line-height:1.35; display:none;"></div>
+          <div id="adminLineActive" style="color:#ffffff; font-size:1.95rem; font-weight:800; line-height:1.35;">
+            <span style="color:#64748b; font-weight:500; font-size:1.15rem; font-style:italic;">Click START above and speak into the soundboard mic. Live captions will appear here and in OBS.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- SOUND DEVICE & VU METER -->
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <div style="display:flex; justify-content:space-between; font-size:0.8rem; color:var(--muted);">
+          <span>Audio Input Source:</span>
+          <span id="micStatus">Mic: Inactive</span>
+        </div>
+        <select id="audioSelect">
+          <option value="">Default Sound Board / System Mic</option>
+        </select>
+        <div class="vu-meter-bar">
+          <div id="vuFill" class="vu-fill"></div>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <!-- ADMIN DASHBOARD PANEL -->
-  <div id="adminView" class="hidden" style="width:100%; display:flex; flex-direction:column; align-items:center;">
-    <header>
-      <div>
-        <h1>spokenlight.dondlingergc.com</h1>
-        <p class="subtitle">Cloudflare Workers AI Live Captioning & Route Controller</p>
-      </div>
-      <div style="display:flex; gap:10px;">
-        <a href="/stats.html" class="btn secondary" style="width:auto; padding:8px 16px; text-decoration:none;">Usage Logs</a>
-        <a href="/about.html" class="btn secondary" style="width:auto; padding:8px 16px; text-decoration:none;">About & Legal</a>
-        <button id="logoutBtn" class="btn secondary" style="width:auto; padding:8px 16px;">Logout</button>
-      </div>
-    </header>
-
-    <main>
-      <div class="card status-bar" style="flex-direction:column; align-items:stretch; gap:12px;">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <div>
-            <strong>Broadcast State:</strong> <span id="statusText">Idle</span>
-          </div>
-          <div id="statusBadge" class="badge">OFFLINE</div>
-        </div>
-
-        <!-- TELEMETRY & PROGRESS BAR -->
-        <div style="display:flex; flex-direction:column; gap:6px;">
-          <div style="display:flex; justify-content:space-between; font-size:0.8rem; color:var(--muted);">
-            <span>4s Batch Flush Cycle</span>
-            <span id="cycleTimerText">0.0s / 4.0s</span>
-          </div>
-          <div style="width:100%; background:#1e293b; height:8px; border-radius:4px; overflow:hidden;">
-            <div id="cycleProgressBar" style="width:0%; height:100%; background:var(--accent); transition:width 0.1s linear;"></div>
-          </div>
-        </div>
-
-        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; font-size:0.8rem; text-align:center;">
-          <div style="background:#0b101b; padding:8px; border-radius:6px; border:1px solid var(--border);">
-            <div style="color:var(--muted);">Buffer Frames</div>
-            <strong id="bufferMeterText">0 KB</strong>
-          </div>
-          <div style="background:#0b101b; padding:8px; border-radius:6px; border:1px solid var(--border);">
-            <div style="color:var(--muted);">DO Flush Count</div>
-            <strong id="flushMeterText">0</strong>
-          </div>
-          <div style="background:#0b101b; padding:8px; border-radius:6px; border:1px solid var(--border);">
-            <div style="color:var(--muted);">AI Inference Latency</div>
-            <strong id="latencyMeterText">-- ms</strong>
-          </div>
-        </div>
-      </div>
-
-      <div class="card grid-2">
-        <div>
-          <h2 style="font-size:1.1rem; margin-top:0;">Audio Stream Dispatcher</h2>
-          <p style="color:var(--muted); font-size:0.85rem;">Capture input device audio (OBS Cable / Line In / Mic) & dispatch 16kHz PCM chunks to Durable Object.</p>
-          
-          <div class="form-group">
-            <label for="audioSourceSelect">Audio Input Source</label>
-            <select id="audioSourceSelect">
-              <option value="">Default Input Device</option>
-            </select>
-          </div>
-
-          <button id="streamBtn" class="btn">Start Audio Broadcast</button>
-        </div>
-        <div>
-          <h2 style="font-size:1.1rem; margin-top:0;">Quick OBS Overlay Link</h2>
-          <p style="color:var(--muted); font-size:0.85rem;">Browser source URL for lower-third broadcast overlay integration.</p>
-          <input type="text" id="overlayUrlInput" readonly style="width:100%; box-sizing:border-box;">
-        </div>
-      </div>
-
-      <div class="card">
-        <h2 style="font-size:1.1rem; margin-top:0;">Routing & Configuration Controls</h2>
-        <div class="grid-2">
-          <div class="form-group">
-            <label for="whisperModelSelect">Workers AI Model Pipeline</label>
-            <select id="whisperModelSelect">
-              <option value="@cf/openai/whisper-large-v3-turbo">@cf/openai/whisper-large-v3-turbo (Default / Fast)</option>
-              <option value="@cf/openai/whisper">@cf/openai/whisper (Standard)</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="initialPromptInput">Whisper Initial Context Prompt (Church Glossary)</label>
-            <input type="text" id="initialPromptInput" value="Calvary Baptist Church sermon: Pastor, Genesis, Jesus, Apostle, Lord, Grace, Faith, Gospel, Scriptures, Amen." placeholder="Add vocabulary context or custom terms...">
-          </div>
-        </div>
-        <button id="saveConfigBtn" class="btn secondary">Apply Routing Settings</button>
-      </div>
-
-      <div class="card">
-        <h2 style="font-size:1.1rem; margin-top:0;">Live Transcribed Caption Stream</h2>
-        <div id="captionBox" class="caption-box">Captions will display here in real time...</div>
-      </div>
-    </main>
-  </div>
+  <div id="toast" class="toast"></div>
 
   <script>
     let isStreaming = false;
-    let mediaRecorder = null;
+    let currentMode = "sermon"; // "sermon" or "worship"
     let ws = null;
-
-    const loginView = document.getElementById('loginView');
-    const adminView = document.getElementById('adminView');
-    const loginBtn = document.getElementById('loginBtn');
-    const logoutBtn = document.getElementById('logoutBtn');
-    const adminKeyInput = document.getElementById('adminKey');
-    const loginError = document.getElementById('loginError');
-
-    const streamBtn = document.getElementById('streamBtn');
-    const statusText = document.getElementById('statusText');
-    const statusBadge = document.getElementById('statusBadge');
-    const captionBox = document.getElementById('captionBox');
-    const overlayUrlInput = document.getElementById('overlayUrlInput');
-    const saveConfigBtn = document.getElementById('saveConfigBtn');
-
-    // Populate Overlay URL
-    overlayUrlInput.value = `${location.origin}/overlay.html`;
-
-    function checkAuth() {
-      const token = localStorage.getItem('spokenlight_admin_token');
-      if (token === 'authenticated') {
-        loginView.classList.add('hidden');
-        adminView.classList.remove('hidden');
-        initWebSocket();
-      } else {
-        loginView.classList.remove('hidden');
-        adminView.classList.add('hidden');
-      }
-    }
-
-    loginBtn.addEventListener('click', () => {
-      // Basic secure passcode verification state
-      const pass = adminKeyInput.value.trim();
-      if (pass === 'snaptempo' || pass.length >= 6) {
-        localStorage.setItem('spokenlight_admin_token', 'authenticated');
-        loginError.classList.add('hidden');
-        checkAuth();
-      } else {
-        loginError.classList.remove('hidden');
-      }
-    });
-
-    logoutBtn.addEventListener('click', () => {
-      localStorage.removeItem('spokenlight_admin_token');
-      if (ws) ws.close();
-      checkAuth();
-    });
-
-    function initWebSocket() {
-      const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-      ws = new WebSocket(`${protocol}//${location.host}/api/ws`);
-
-      ws.onopen = () => {
-        console.log('Connected to Durable Object WebSocket');
-      };
-
-      ws.onclose = () => {
-        if (localStorage.getItem('spokenlight_admin_token') === 'authenticated') {
-          setTimeout(initWebSocket, 2000);
-        }
-      };
-    }
-
-    let progressInterval = null;
-    let cycleStartTime = 0;
-    let totalBytesSent = 0;
-    let flushCount = 0;
-
-    const cycleTimerText = document.getElementById('cycleTimerText');
-    const cycleProgressBar = document.getElementById('cycleProgressBar');
-    const bufferMeterText = document.getElementById('bufferMeterText');
-    const flushMeterText = document.getElementById('flushMeterText');
-    const latencyMeterText = document.getElementById('latencyMeterText');
-
-    function startProgressBar() {
-      cycleStartTime = Date.now();
-      clearInterval(progressInterval);
-      progressInterval = setInterval(() => {
-        if (!isStreaming) return;
-        const elapsed = (Date.now() - cycleStartTime) % 4000;
-        const pct = (elapsed / 4000) * 100;
-        if (cycleProgressBar) cycleProgressBar.style.width = `${pct}%`;
-        if (cycleTimerText) cycleTimerText.innerText = `${(elapsed / 1000).toFixed(1)}s / 4.0s`;
-
-        if (elapsed < 100 && flushMeterText) {
-          flushCount++;
-          flushMeterText.innerText = `${flushCount}`;
-        }
-      }, 100);
-    }
-
-    function stopProgressBar() {
-      clearInterval(progressInterval);
-      if (cycleProgressBar) cycleProgressBar.style.width = '0%';
-      if (cycleTimerText) cycleTimerText.innerText = '0.0s / 4.0s';
-      if (bufferMeterText) bufferMeterText.innerText = '0 KB';
-      if (latencyMeterText) latencyMeterText.innerText = '-- ms';
-    }
-
-    const audioSourceSelect = document.getElementById('audioSourceSelect');
-
-    async function populateAudioDevices() {
-      try {
-        // Request initial permission to unlock hardware device labels
-        await navigator.mediaDevices.getUserMedia({ audio: true }).then(s => s.getTracks().forEach(t => t.stop())).catch(() => {});
-        
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        const audioInputs = devices.filter(device => device.kind === 'audioinput');
-        audioSourceSelect.innerHTML = '';
-        audioInputs.forEach((device, index) => {
-          const option = document.createElement('option');
-          option.value = device.deviceId;
-          option.text = device.label || `Audio Device (${device.deviceId.slice(0, 8)})`;
-          audioSourceSelect.appendChild(option);
-        });
-      } catch (err) {
-        console.error('Error enumerating audio devices:', err);
-      }
-    }
-
     let audioContext = null;
     let audioStream = null;
     let scriptProcessor = null;
+    let analyser = null;
+    let animFrame = null;
+    let adminSentenceStack = [];
+
+    const mainToggleBtn = document.getElementById('mainToggleBtn');
+    const modeToggleBtn = document.getElementById('modeToggleBtn');
+    const modeHint = document.getElementById('modeHint');
+    const adminLineTop = document.getElementById('adminLineTop');
+    const adminLineMid = document.getElementById('adminLineMid');
+    const adminLineActive = document.getElementById('adminLineActive');
+    const audioSelect = document.getElementById('audioSelect');
+    const vuFill = document.getElementById('vuFill');
+    const micStatus = document.getElementById('micStatus');
+    const copyObsBtn = document.getElementById('copyObsBtn');
+    const toast = document.getElementById('toast');
+
+    function showToast(msg) {
+      toast.innerText = msg;
+      toast.style.display = 'block';
+      setTimeout(() => { toast.style.display = 'none'; }, 2500);
+    }
+
+    function renderAdminStack() {
+      if (adminSentenceStack.length === 0) {
+        adminLineTop.style.display = 'none';
+        adminLineMid.style.display = 'none';
+        adminLineActive.innerHTML = '<span style="color:#64748b; font-weight:500; font-size:1.15rem; font-style:italic;">Awaiting live speech...</span>';
+        return;
+      }
+
+      if (adminSentenceStack.length === 1) {
+        adminLineTop.style.display = 'none';
+        adminLineMid.style.display = 'none';
+        adminLineActive.innerText = adminSentenceStack[0];
+      } else if (adminSentenceStack.length === 2) {
+        adminLineTop.style.display = 'none';
+        adminLineMid.style.display = 'block';
+        adminLineMid.innerText = adminSentenceStack[0];
+        adminLineActive.innerText = adminSentenceStack[1];
+      } else {
+        adminLineTop.style.display = 'block';
+        adminLineTop.innerText = adminSentenceStack[0];
+        adminLineMid.style.display = 'block';
+        adminLineMid.innerText = adminSentenceStack[1];
+        adminLineActive.innerText = adminSentenceStack[2];
+      }
+    }
+
+    function pushAdminCaption(text) {
+      if (!text || text.trim().length === 0) return;
+      const clean = text.trim();
+      if (adminSentenceStack.length > 0 && adminSentenceStack[adminSentenceStack.length - 1] === clean) return;
+
+      adminSentenceStack.push(clean);
+      if (adminSentenceStack.length > 3) adminSentenceStack.shift();
+      renderAdminStack();
+    }
+
+    copyObsBtn.addEventListener('click', () => {
+      const url = `${location.protocol}//${location.host}/overlay.html`;
+      navigator.clipboard.writeText(url).then(() => {
+        showToast('✓ OBS Link Copied to Clipboard!');
+      });
+    });
+
+    function setMode(mode) {
+      currentMode = mode;
+      if (currentMode === "worship") {
+        modeToggleBtn.innerHTML = '🎵 WORSHIP (MUTED / PAUSED)';
+        modeToggleBtn.className = 'btn-worship muted';
+        adminSentenceStack = [];
+        renderAdminStack();
+        showToast('🎵 Worship Mode: Captions Muted');
+      } else {
+        modeToggleBtn.innerHTML = '🎙️ SERMON (ACTIVE)';
+        modeToggleBtn.className = 'btn-worship';
+        showToast('🎙️ Sermon Mode: Captions Active');
+      }
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'set_mode', mode: currentMode }));
+      }
+    }
+
+    modeToggleBtn.addEventListener('click', () => {
+      setMode(currentMode === "sermon" ? "worship" : "sermon");
+    });
+
+    window.addEventListener('keydown', (e) => {
+      if (e.target && ['input', 'select', 'textarea'].includes(e.target.tagName.toLowerCase())) return;
+      if (e.code === 'Space' || e.key === ' ' || e.key.toLowerCase() === 'm') {
+        e.preventDefault();
+        if (isStreaming) {
+          setMode(currentMode === "sermon" ? "worship" : "sermon");
+        }
+      }
+    });
+
+    function initWebSocket() {
+      if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
+      const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      ws = new WebSocket(`${protocol}//${location.host}/api/ws`);
+
+      ws.onmessage = (e) => {
+        try {
+          const data = JSON.parse(e.data);
+          if (data.type === 'caption' && data.text) {
+            pushAdminCaption(data.text);
+          } else if (data.type === 'mode_change' && data.mode) {
+            if (data.mode !== currentMode) setMode(data.mode);
+          }
+        } catch (err) {}
+      };
+
+      ws.onclose = () => {
+        ws = null;
+        setTimeout(initWebSocket, 2000);
+      };
+    }
+
+    function updateVu() {
+      if (!isStreaming || !analyser) return;
+      const data = new Uint8Array(analyser.frequencyBinCount);
+      analyser.getByteFrequencyData(data);
+      let sum = 0;
+      for (let i = 0; i < data.length; i++) sum += data[i];
+      const pct = Math.min(100, Math.round(((sum / data.length) / 128) * 100));
+      vuFill.style.width = `${pct}%`;
+      micStatus.innerText = currentMode === "worship" ? "🎵 Muted for Worship" : `🎙️ Live (${pct}%)`;
+      animFrame = requestAnimationFrame(updateVu);
+    }
 
     async function startStreaming() {
       try {
-        const selectedDeviceId = audioSourceSelect.value;
-        const audioConstraints = selectedDeviceId ? { deviceId: { exact: selectedDeviceId }, sampleRate: 16000, channelCount: 1 } : { sampleRate: 16000, channelCount: 1 };
+        const deviceId = audioSelect.value;
+        const constraints = deviceId ? { deviceId: { exact: deviceId }, channelCount: 1 } : { channelCount: 1 };
+        audioStream = await navigator.mediaDevices.getUserMedia({ audio: constraints });
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioContext.state === 'suspended') await audioContext.resume();
 
-        audioStream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
-        audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
         const source = audioContext.createMediaStreamSource(audioStream);
-        
-        // Use ScriptProcessorNode (bufferSize 4096) to collect mono PCM float frames
-        scriptProcessor = audioContext.createScriptProcessor(4096, 1, 1);
-        let pcmBufferAccumulator = [];
 
-        const nativeSampleRate = audioContext.sampleRate;
+        // 1. Studio 80Hz High-Pass Sub-Bass Rumble Filter
+        const highPass = audioContext.createBiquadFilter();
+        highPass.type = 'highpass';
+        highPass.frequency.value = 80;
+        highPass.Q.value = 0.707;
+
+        // 2. Studio Dynamics Compressor (Levels quiet speech & tames spikes)
+        const compressor = audioContext.createDynamicsCompressor();
+        compressor.threshold.value = -24;
+        compressor.knee.value = 12;
+        compressor.ratio.value = 4;
+        compressor.attack.value = 0.003;
+        compressor.release.value = 0.25;
+
+        analyser = audioContext.createAnalyser();
+        analyser.fftSize = 256;
+
+        source.connect(highPass);
+        highPass.connect(compressor);
+        compressor.connect(analyser);
+
+        window._proc = audioContext.createScriptProcessor(4096, 1, 1);
+        scriptProcessor = window._proc;
+        let pcmAcc = [];
+        const nativeRate = audioContext.sampleRate;
 
         scriptProcessor.onaudioprocess = (e) => {
-          if (!isStreaming) return;
-          const inputData = e.inputBuffer.getChannelData(0);
-          
-          // Downsample native hardware rate (e.g. 48kHz or 44.1kHz) to target 16kHz
-          const sampleRatio = nativeSampleRate / 16000;
-          const targetLength = Math.floor(inputData.length / sampleRatio);
+          if (!isStreaming || currentMode === "worship") {
+            pcmAcc = [];
+            return;
+          }
+          const input = e.inputBuffer.getChannelData(0);
+          const ratio = nativeRate / 16000;
+          const targetLen = Math.floor(input.length / ratio);
 
-          for (let i = 0; i < targetLength; i++) {
-            const origIndex = Math.floor(i * sampleRatio);
-            pcmBufferAccumulator.push(inputData[origIndex]);
+          // Anti-aliased weighted linear interpolation downsampling
+          for (let i = 0; i < targetLen; i++) {
+            const srcPos = i * ratio;
+            const srcIndex = Math.floor(srcPos);
+            const nextIndex = Math.min(srcIndex + 1, input.length - 1);
+            const frac = srcPos - srcIndex;
+            const sample = input[srcIndex] * (1 - frac) + input[nextIndex] * frac;
+            pcmAcc.push(sample);
           }
 
-          // When accumulator holds >= 1 sec of 16kHz audio (16,000 samples)
-          if (pcmBufferAccumulator.length >= 16000) {
-            const samples = pcmBufferAccumulator.slice(0, 16000);
-            pcmBufferAccumulator = pcmBufferAccumulator.slice(16000);
-
-            // Convert Float32 [-1.0, 1.0] to Int16 PCM ArrayBuffer
-            const int16Buffer = new Int16Array(samples.length);
+          if (pcmAcc.length >= 4000) {
+            const samples = pcmAcc.slice(0, 4000);
+            pcmAcc = pcmAcc.slice(4000);
+            const int16 = new Int16Array(samples.length);
             for (let i = 0; i < samples.length; i++) {
               const s = Math.max(-1, Math.min(1, samples[i]));
-              int16Buffer[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+              int16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
             }
-
-            // Send binary PCM chunk over active WebSocket stream if connected
             if (ws && ws.readyState === WebSocket.OPEN) {
-              ws.send(int16Buffer.buffer);
-            } else {
-              fetch('/api/audio', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/octet-stream' },
-                body: int16Buffer.buffer
-              }).catch(console.error);
+              ws.send(int16.buffer);
             }
           }
         };
 
-        source.connect(scriptProcessor);
+        compressor.connect(scriptProcessor);
         scriptProcessor.connect(audioContext.destination);
 
         isStreaming = true;
-        startProgressBar();
-        streamBtn.innerText = 'Stop Audio Broadcast';
-        streamBtn.classList.add('stop');
-        statusText.innerText = 'Broadcasting 16kHz PCM Audio';
-        statusBadge.innerText = 'LIVE STREAMING';
-        statusBadge.classList.add('active');
+        updateVu();
+
+        mainToggleBtn.innerText = '⏹ STOP LIVE CAPTIONS';
+        mainToggleBtn.className = 'btn-main running';
+        modeToggleBtn.style.display = 'block';
+        modeHint.style.display = 'block';
+        showToast('✓ Live Captions Started!');
       } catch (err) {
-        alert('Microphone PCM capture failed: ' + err.message);
+        alert('Could not start microphone: ' + err.message);
       }
     }
 
     function stopStreaming() {
       isStreaming = false;
-      stopProgressBar();
-      if (scriptProcessor) {
-        scriptProcessor.disconnect();
-        scriptProcessor = null;
-      }
-      if (audioContext) {
-        audioContext.close();
-        audioContext = null;
-      }
-      if (audioStream) {
-        audioStream.getTracks().forEach(track => track.stop());
-        audioStream = null;
-      }
-      streamBtn.innerText = 'Start Audio Broadcast';
-      streamBtn.classList.remove('stop');
-      statusText.innerText = 'Idle';
-      statusBadge.innerText = 'OFFLINE';
-      statusBadge.classList.remove('active');
+      if (animFrame) cancelAnimationFrame(animFrame);
+      if (window._proc) { window._proc.disconnect(); window._proc = null; }
+      if (scriptProcessor) { scriptProcessor.disconnect(); scriptProcessor = null; }
+      if (analyser) { analyser.disconnect(); analyser = null; }
+      if (audioContext) { audioContext.close(); audioContext = null; }
+      if (audioStream) { audioStream.getTracks().forEach(t => t.stop()); audioStream = null; }
+
+      mainToggleBtn.innerText = '▶ START LIVE CAPTIONS';
+      mainToggleBtn.className = 'btn-main';
+      modeToggleBtn.style.display = 'none';
+      modeHint.style.display = 'none';
+      vuFill.style.width = '0%';
+      micStatus.innerText = 'Mic: Inactive';
+      showToast('Live Captions Stopped');
     }
 
-    streamBtn.addEventListener('click', () => {
-      if (!isStreaming) {
-        startStreaming();
-      } else {
-        stopStreaming();
-      }
+    mainToggleBtn.addEventListener('click', () => {
+      if (!isStreaming) startStreaming();
+      else stopStreaming();
     });
 
-    saveConfigBtn.addEventListener('click', () => {
-      alert('Routing configuration updated dynamically in Durable Object state.');
-    });
+    async function populateDevices() {
+      try {
+        await navigator.mediaDevices.getUserMedia({ audio: true }).then(s => s.getTracks().forEach(t => t.stop())).catch(() => {});
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const inputs = devices.filter(d => d.kind === 'audioinput');
+        audioSelect.innerHTML = '';
+        inputs.forEach(d => {
+          const opt = document.createElement('option');
+          opt.value = d.deviceId;
+          opt.text = d.label || `Sound Input (${d.deviceId.slice(0, 6)})`;
+          audioSelect.appendChild(opt);
+        });
+      } catch (err) {}
+    }
 
-    checkAuth();
-    populateAudioDevices();
-    navigator.mediaDevices.ondevicechange = populateAudioDevices;
+    initWebSocket();
+    populateDevices();
   </script>
 </body>
 </html>
