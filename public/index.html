@@ -169,10 +169,13 @@
   <div class="container">
     <div class="header-bar">
       <div class="title-group">
-        <h1>🎙️ Spoken Light <span style="font-size:0.75rem; background:#16a34a; padding:2px 8px; border-radius:6px; font-weight:800;">v3.0</span></h1>
+        <h1>🎙️ Spoken Light <span style="font-size:0.75rem; background:#0284c7; padding:2px 8px; border-radius:6px; font-weight:800;">v3.1</span></h1>
         <div style="font-size:0.8rem; color:var(--muted); margin-top:2px;">Calvary Baptist Church • Live Broadcast Captions</div>
       </div>
-      <button id="copyObsBtn" class="btn-copy">📋 Copy OBS Overlay Link</button>
+      <div style="display:flex; gap:8px;">
+        <button id="saveTranscriptBtn" class="btn-copy" style="background:#0f766e; border-color:#14b8a6; color:#fff;">💾 Save Transcript</button>
+        <button id="copyObsBtn" class="btn-copy">📋 Copy OBS Overlay Link</button>
+      </div>
     </div>
 
     <!-- MAIN ALL-IN-ONE CARD -->
@@ -230,6 +233,7 @@
     let analyser = null;
     let animFrame = null;
     let adminSentenceStack = [];
+    let sessionTranscript = [];
 
     const mainToggleBtn = document.getElementById('mainToggleBtn');
     const modeToggleBtn = document.getElementById('modeToggleBtn');
@@ -283,6 +287,42 @@
       adminSentenceStack.push(clean);
       if (adminSentenceStack.length > 3) adminSentenceStack.shift();
       renderAdminStack();
+
+      // Record clean chronological broadcast transcript
+      const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      sessionTranscript.push(`[${timeStr}] ${clean}`);
+    }
+
+    function downloadTranscript() {
+      if (sessionTranscript.length === 0) {
+        showToast('ℹ️ No live transcript to save yet');
+        return;
+      }
+
+      const now = new Date();
+      const datePart = now.toISOString().slice(0, 10);
+      const timePart = now.toTimeString().slice(0, 8).replace(/:/g, '-');
+      const filename = `SpokenLight_Transcript_${datePart}_${timePart}.txt`;
+
+      const header = `====================================================\nSPOKEN LIGHT BROADCAST TRANSCRIPT\nDate: ${now.toLocaleDateString()} ${now.toLocaleTimeString()}\nChurch: Calvary Baptist Church\nTotal Entries: ${sessionTranscript.length}\n====================================================\n\n`;
+      const content = header + sessionTranscript.join('\n\n') + '\n';
+
+      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      showToast(`✓ Saved: ${filename}`);
+    }
+
+    const saveTranscriptBtn = document.getElementById('saveTranscriptBtn');
+    if (saveTranscriptBtn) {
+      saveTranscriptBtn.addEventListener('click', downloadTranscript);
     }
 
     copyObsBtn.addEventListener('click', () => {
