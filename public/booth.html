@@ -354,7 +354,7 @@
               <span class="slider"></span>
             </label>
             <div>
-              <div style="font-size:0.98rem; font-weight:800; color:#ffffff;">Arm Sermon Archive (D1 Cloud & AI Slicing)</div>
+              <div style="font-size:0.98rem; font-weight:800; color:#ffffff;">Arm Sermon Archive (Cloud D1 & Chapter Slicing)</div>
               <div style="font-size:0.78rem; color:var(--muted);">Captures transcript, auto-slices chapters by scripture & 5m marks, and generates pastor notes.</div>
             </div>
           </div>
@@ -504,7 +504,8 @@
     });
 
     copyObsBtn.addEventListener('click', () => {
-      const overlayUrl = `${window.location.origin}/overlay`;
+      const tenantParam = new URLSearchParams(window.location.search).get('tenant') || 'calvary';
+      const overlayUrl = `${window.location.origin}/overlay?tenant=${encodeURIComponent(tenantParam)}`;
       navigator.clipboard.writeText(overlayUrl).then(() => {
         showToast("Copied OBS Overlay Link: " + overlayUrl);
       }).catch(() => {
