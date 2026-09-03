@@ -3,190 +3,525 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Spoken Light - Church Live Captions & Slicing Architecture</title>
+  <title>Spoken Light — Live AI Captions & Slicing for Local Churches</title>
+  <meta name="description" content="Unlimited live speech-to-text captions, native OBS lower-thirds, and AI sermon notes built right here in Central Wisconsin. Zero hour limits. Zero corporate bloat.">
   <style>
     :root {
-      --bg: #090d16;
-      --card-bg: #111827;
-      --card-border: #1f2937;
-      --accent: #3b82f6;
-      --accent-hover: #2563eb;
+      --bg: #070a12;
+      --card-bg: #0f172a;
+      --card-border: #1e293b;
+      --accent: #2563eb;
+      --accent-glow: rgba(37, 99, 235, 0.35);
       --gold: #f59e0b;
-      --teal: #0f766e;
+      --gold-bg: rgba(245, 158, 11, 0.1);
       --text: #f8fafc;
       --muted: #94a3b8;
-      --danger: #dc2626;
-      --success: #16a34a;
+      --danger: #ef4444;
+      --success: #10b981;
     }
-    * { box-sizing: border-box; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      margin: 0;
-      padding: 36px 16px;
       background: var(--bg);
       color: var(--text);
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      line-height: 1.6;
+      padding: 0 16px 80px 16px;
+    }
+    .wrapper {
+      max-width: 1040px;
+      margin: 0 auto;
       display: flex;
       flex-direction: column;
+      gap: 56px;
+    }
+    /* Top Bar */
+    .nav-bar {
+      display: flex;
+      justify-content: space-between;
       align-items: center;
-      min-height: 100vh;
-    }
-    .container {
-      width: 100%;
-      max-width: 860px;
-      display: flex;
-      flex-direction: column;
-      gap: 24px;
-    }
-    .header-bar {
-      text-align: center;
-      padding-bottom: 20px;
+      padding: 24px 0;
       border-bottom: 1px solid var(--card-border);
+      flex-wrap: wrap;
+      gap: 16px;
     }
-    .header-bar h1 {
-      margin: 0 0 8px 0;
-      font-size: 2rem;
+    .brand {
+      font-size: 1.35rem;
       font-weight: 800;
       display: flex;
       align-items: center;
-      justify-content: center;
-      gap: 10px;
+      gap: 8px;
     }
-    .subtitle {
-      font-size: 1rem;
+    .badge-wi {
+      background: #1e3a8a;
+      color: #93c5fd;
+      font-size: 0.72rem;
+      font-weight: 800;
+      padding: 4px 10px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .nav-links {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+    .btn-nav {
+      background: transparent;
       color: var(--muted);
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 600;
+      padding: 8px 14px;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      transition: all 0.2s ease;
     }
-    /* Slices Grid */
-    .slice-grid {
+    .btn-nav:hover {
+      color: #fff;
+      border-color: var(--card-border);
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      text-decoration: none;
+      font-size: 0.95rem;
+      font-weight: 700;
+      padding: 10px 18px;
+      border-radius: 8px;
+      box-shadow: 0 4px 14px var(--accent-glow);
+      transition: all 0.2s ease;
+    }
+    .btn-primary:hover {
+      filter: brightness(1.15);
+      transform: translateY(-1px);
+    }
+
+    /* Hero Section */
+    .hero {
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      padding-top: 24px;
+    }
+    .hero-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--gold-bg);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      color: var(--gold);
+      padding: 4px 14px;
+      border-radius: 24px;
+      font-size: 0.85rem;
+      font-weight: 700;
+    }
+    .hero h1 {
+      font-size: 2.75rem;
+      font-weight: 900;
+      line-height: 1.2;
+      max-width: 860px;
+      letter-spacing: -0.02em;
+    }
+    .hero h1 span {
+      background: linear-gradient(135deg, #60a5fa, #38bdf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hero-p {
+      font-size: 1.15rem;
+      color: var(--muted);
+      max-width: 740px;
+    }
+    .hero-cta-group {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 10px;
+    }
+
+    /* The Problem Box / The Industry Racket */
+    .racket-card {
+      background: rgba(239, 68, 68, 0.05);
+      border: 1px solid rgba(239, 68, 68, 0.25);
+      border-radius: 16px;
+      padding: 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .racket-title {
+      color: #fca5a5;
+      font-size: 1.25rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .racket-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 18px;
+      margin-top: 8px;
+    }
+    .racket-item {
+      background: #0b1120;
+      border: 1px solid #1f2937;
+      border-radius: 10px;
+      padding: 16px;
+    }
+    .racket-item b {
+      color: #fff;
+      display: block;
+      margin-bottom: 6px;
+      font-size: 0.98rem;
+    }
+    .racket-item p {
+      font-size: 0.88rem;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    /* How Spoken Light Works */
+    .section-title {
+      font-size: 1.85rem;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      text-align: center;
+      margin-bottom: 8px;
+    }
+    .section-sub {
+      text-align: center;
+      color: var(--muted);
+      font-size: 1rem;
+      max-width: 650px;
+      margin: 0 auto 28px auto;
+    }
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
       gap: 20px;
     }
-    .slice-card {
+    .feature-card {
       background: var(--card-bg);
       border: 1px solid var(--card-border);
       border-radius: 14px;
       padding: 24px;
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
-      gap: 16px;
-      text-decoration: none;
-      color: inherit;
-      transition: all 0.2s ease;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+      gap: 12px;
     }
-    .slice-card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 12px 32px rgba(59, 130, 246, 0.2);
-      border-color: var(--accent);
+    .feature-icon {
+      font-size: 2rem;
     }
-    .slice-icon {
-      font-size: 2.2rem;
-      margin-bottom: 4px;
-    }
-    .slice-title {
-      font-size: 1.3rem;
+    .feature-card h3 {
+      font-size: 1.2rem;
       font-weight: 800;
       color: #fff;
     }
-    .slice-badge {
-      display: inline-block;
-      padding: 3px 8px;
-      border-radius: 6px;
-      font-size: 0.72rem;
-      font-weight: 800;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-      margin-left: 6px;
-    }
-    .slice-desc {
+    .feature-card p {
       font-size: 0.9rem;
       color: var(--muted);
       line-height: 1.5;
     }
-    .btn-enter {
-      padding: 12px 16px;
-      border-radius: 8px;
-      font-weight: 700;
-      font-size: 0.95rem;
-      text-align: center;
-      background: #1e293b;
-      color: #fff;
-      border: 1px solid #334155;
-      transition: all 0.15s ease;
+
+    /* Pricing & White-Glove Setup */
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 24px;
     }
-    .slice-card:hover .btn-enter {
+    .pricing-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 32px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 20px;
+      position: relative;
+    }
+    .pricing-card.featured {
+      border-color: var(--accent);
+      box-shadow: 0 8px 32px var(--accent-glow);
+    }
+    .pricing-badge {
+      position: absolute;
+      top: -12px;
+      right: 24px;
       background: var(--accent);
-      border-color: var(--accent-hover);
-    }
-    /* Info Card */
-    .info-card {
-      background: #0d1322;
-      border: 1px solid #1e293b;
+      color: #fff;
+      font-size: 0.75rem;
+      font-weight: 800;
+      padding: 4px 12px;
       border-radius: 12px;
-      padding: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .price-num {
+      font-size: 2.8rem;
+      font-weight: 900;
+      color: #fff;
+      line-height: 1;
+    }
+    .price-sub {
       font-size: 0.88rem;
-      line-height: 1.6;
       color: var(--muted);
+    }
+    .price-features {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      font-size: 0.92rem;
+    }
+    .price-features li {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Founder Note / Central Wisconsin Roots */
+    .founder-card {
+      background: #0d1527;
+      border: 1px solid #1e3a8a;
+      border-radius: 16px;
+      padding: 32px;
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .founder-avatar {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: #1e3a8a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      border: 2px solid #3b82f6;
+    }
+    .founder-content {
+      flex: 1;
+      min-width: 280px;
+    }
+    .founder-content h3 {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 6px;
+    }
+    .founder-content p {
+      font-size: 0.92rem;
+      color: #cbd5e1;
+      line-height: 1.6;
+    }
+
+    /* Console Links Footer Bar */
+    .console-links {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      padding-top: 24px;
+      border-top: 1px solid var(--card-border);
+    }
+    .console-link-btn {
+      background: #0f172a;
+      border: 1px solid var(--card-border);
+      color: #e2e8f0;
+      text-decoration: none;
+      font-size: 0.88rem;
+      font-weight: 700;
+      padding: 10px 16px;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+    .console-link-btn:hover {
+      background: #1e293b;
+      border-color: var(--accent);
     }
   </style>
 </head>
 <body>
 
-  <div class="container">
-    <div class="header-bar">
-      <h1>🎙️ Spoken Light</h1>
-      <div class="subtitle">Calvary Baptist Church • Real-Time AI Live Captioning & Sermon Slicing Platform</div>
-    </div>
-
-    <!-- ROLE-BASED UI SLICES -->
-    <div class="slice-grid">
-      <!-- SLICE 1: BOOTH -->
-      <a href="/booth" class="slice-card">
-        <div>
-          <div class="slice-icon">🎛️</div>
-          <div class="slice-title">Sound Booth <span class="slice-badge" style="background:#1e3a8a; color:#93c5fd;">/booth</span></div>
-          <div class="slice-desc" style="margin-top:8px;">
-            Clean, zero-distraction soundboard console for high school volunteers with simple login (<code>booth</code> / <code>calvary</code>), mic VU meters, and the <b>Arm Sermon Archive</b> toggle.
-          </div>
-        </div>
-        <div class="btn-enter">Open Sound Booth Console &rarr;</div>
-      </a>
-
-      <!-- SLICE 2: OVERLAY -->
-      <a href="/overlay" class="slice-card" target="_blank">
-        <div>
-          <div class="slice-icon">📺</div>
-          <div class="slice-title">OBS Livestream <span class="slice-badge" style="background:#4c1d95; color:#c4b5fd;">/overlay</span></div>
-          <div class="slice-desc" style="margin-top:8px;">
-            100% transparent browser source for OBS Studio. Hardware-accelerated 3-line rolling teleprompter with automatic fade-out and real-time scripture reading banners.
-          </div>
-        </div>
-        <div class="btn-enter">Launch OBS Lower-Third &rarr;</div>
-      </a>
-
-      <!-- SLICE 3: SERMONS -->
-      <a href="/sermons" class="slice-card">
-        <div>
-          <div class="slice-icon">📖</div>
-          <div class="slice-title">Pastor Portal <span class="slice-badge" style="background:#064e3b; color:#6ee7b7;">/sermons</span></div>
-          <div class="slice-desc" style="margin-top:8px;">
-            Public & pastor portal to browse archived messages, view Llama 3.1 AI executive summaries, 3 key biblical takeaways, detected scriptures, and structured chapter timelines.
-          </div>
-        </div>
-        <div class="btn-enter">Explore Sermon Archives &rarr;</div>
-      </a>
-    </div>
-
-    <!-- ARCHITECTURE SUMMARY -->
-    <div class="info-card">
-      <div style="font-weight:800; color:#f8fafc; margin-bottom:6px;">⚡ Spoken Light Slicing Architecture</div>
-      <div>
-        • <b>Temporal & Scripture Slicing</b>: Automatically segments live sermons into structured chapters anchored by detected Bible verses (<code>SCRIPTURE_REF_PATTERN</code>) and 5-minute intervals.<br>
-        • <b>Cloudflare D1 Persistence</b>: Fully relational storage across <code>sermons</code>, <code>sermon_captions</code>, <code>sermon_scriptures</code>, and <code>sermon_chapters</code>.<br>
-        • <b>Llama 3.1 8B Edge Synthesis</b>: Generates concise pastoral executive summaries and structured takeaways at the conclusion of every service.
+  <div class="wrapper">
+    <!-- TOP NAV -->
+    <header class="nav-bar">
+      <div class="brand">
+        🎙️ Spoken Light <span class="badge-wi">Central Wisconsin Built</span>
       </div>
-    </div>
+      <nav class="nav-links">
+        <a href="#why" class="btn-nav">Why Us</a>
+        <a href="#pricing" class="btn-nav">Pricing & Setup</a>
+        <a href="#about" class="btn-nav">About John</a>
+        <a href="/booth" class="btn-primary">Open Sound Booth Console &rarr;</a>
+      </nav>
+    </header>
+
+    <!-- HERO SECTION -->
+    <section class="hero">
+      <div class="hero-tag">
+        📍 Hand-Crafted in Central Wisconsin • Zero Corporate Middlemen
+      </div>
+      <h1>Live AI Captions That <span>Don’t Nickel-and-Dime</span> Your Church.</h1>
+      <p class="hero-p">
+        Most captioning software forces churches to choose between serving the hearing-impaired and counting every minute so they don’t exceed a 20-hour monthly cap. Spoken Light delivers unlimited live captions, instant OBS broadcast transparency, and scripture-anchored pastor notes without minute limits.
+      </p>
+      <div class="hero-cta-group">
+        <a href="/booth" class="btn-primary" style="padding: 14px 28px; font-size: 1.05rem;">
+          Try the Sound Booth Demo (Free)
+        </a>
+        <a href="#setup" class="btn-nav" style="border: 1px solid var(--card-border); padding: 14px 22px;">
+          Book In-Person Setup in Wisconsin
+        </a>
+      </div>
+    </section>
+
+    <!-- THE PROBLEM / THE INDUSTRY RACKET -->
+    <section id="why" class="racket-card">
+      <div class="racket-title">
+        ⚠️ Why Traditional "Church Caption Apps" Fail Sunday Volunteers
+      </div>
+      <div class="racket-grid">
+        <div class="racket-item">
+          <b>1. Aggressive 20-Hour Billing Traps</b>
+          <p>Selah Translate and competitors charge $29 to $49/mo for just 20 to 40 hours. If your church runs Wednesday prayer meetings, youth group, and dual Sunday services, you get hit with surprise bills.</p>
+        </div>
+        <div class="racket-item">
+          <b>2. Zero OBS Livestream Integration</b>
+          <p>Most platforms only show text on a congregant's mobile browser via a QR code. They don’t feed directly into OBS Studio or your livestream switcher as a transparent lower-third graphic.</p>
+        </div>
+        <div class="racket-item">
+          <b>3. Too Complex for High School Sound Booths</b>
+          <p>Your audio booth is run by volunteers and high school students. They don’t need complex cloud dashboards; they need a single START button and a spacebar to mute worship songs.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- CORE FEATURES -->
+    <section>
+      <h2 class="section-title">Built for Real Church Soundboards</h2>
+      <p class="section-sub">Direct hardware ingest, instant Bible chapter detection, and zero-liability edge architecture.</p>
+      
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">📺</div>
+          <h3>Native OBS Alpha Lower-Third</h3>
+          <p>A 100% transparent browser source link (<code>/overlay</code>). Drops cleanly over your camera feed in OBS, vMix, or ATEM with kinetic 3-line rolling subtitles and pop-up verse banners.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">📖</div>
+          <h3>Scripture Anchor Auto-Slicing</h3>
+          <p>Whisper AI listens in real-time. When the pastor speaks "Romans 8:28" or "John 3:16", Spoken Light automatically anchors the timeline, slices a new chapter, and highlights the verse.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">⌨️</div>
+          <h3>Single Spacebar Worship Mute</h3>
+          <p>Hit the soundboard keyboard spacebar during worship music to instantly mute subtitles so singing isn’t garbled. Hit it again when the sermon begins. Simple enough for any 15-year-old volunteer.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">🧠</div>
+          <h3>Post-Sermon LLaMA 3.1 Notes</h3>
+          <p>The moment the service ends, Cloudflare edge AI writes an executive summary, 3 bulleted theological takeaways, and chapter sub-summaries for your pastor's newsletter or archive.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">🛡️</div>
+          <h3>15-Min Inactivity Auto-Finalizer</h3>
+          <p>If volunteers walk away after the postlude and leave the soundboard running, our Durable Object alarm automatically finalizes the record and seals the archive without human intervention.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">💾</div>
+          <h3>Dual-Channel Offline Safety</h3>
+          <p>Transcripts save directly to Cloudflare D1 while simultaneously keeping a local <code>.txt</code> backup in soundboard memory so you never lose a message even if the sanctuary router hiccups.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- PRICING & LOCAL PACKAGES -->
+    <section id="pricing">
+      <h2 class="section-title">Transparent Church Pricing</h2>
+      <p class="section-sub">No minute meters. No hidden overages. Real software priced for local ministry budgets.</p>
+
+      <div class="pricing-grid">
+        <!-- Self-Managed Plan -->
+        <div class="pricing-card">
+          <div>
+            <div style="font-weight: 800; color: #93c5fd; font-size: 1.1rem; margin-bottom: 8px;">Unlimited Church Cloud</div>
+            <div class="price-num">$29 <span style="font-size: 1rem; color: var(--muted); font-weight: 500;">/ month</span></div>
+            <p class="price-sub" style="margin-top: 6px;">For churches with an existing tech volunteer or sound director.</p>
+          </div>
+          <ul class="price-features">
+            <li>✅ <b>Unlimited Streaming Hours</b> (No 20h cap)</li>
+            <li>✅ Dedicated Church Subdomain (e.g. <code>grace.spokenlight.app</code>)</li>
+            <li>✅ OBS Transparent Lower-Third Overlay</li>
+            <li>✅ Automatic Scripture Chapter Slicing</li>
+            <li>✅ AI Pastor Study Notes & Bulleted Takeaways</li>
+            <li>✅ Local Volunteer Sound Booth Console</li>
+          </ul>
+          <a href="/booth" class="btn-primary" style="text-align: center;">Get Started Direct</a>
+        </div>
+
+        <!-- White-Glove In-Person Setup Plan -->
+        <div class="pricing-card featured" id="setup">
+          <div class="pricing-badge">Recommended for Wisconsin Churches</div>
+          <div>
+            <div style="font-weight: 800; color: var(--gold); font-size: 1.1rem; margin-bottom: 8px;">On-Site White-Glove Setup</div>
+            <div class="price-num">$249 <span style="font-size: 1rem; color: var(--muted); font-weight: 500;">one-time setup</span></div>
+            <p class="price-sub" style="margin-top: 6px;">Then $29/mo for unlimited cloud hosting.</p>
+          </div>
+          <ul class="price-features">
+            <li>✅ <b>I come directly to your church sound booth</b> (Central WI / Marathon / Wood / Portage / Lincoln counties)</li>
+            <li>✅ Direct USB/XLR audiobox calibration into Spoken Light</li>
+            <li>✅ OBS Studio / ATEM Switcher browser overlay configuration</li>
+            <li>✅ 30-minute training session with your Sunday AV volunteers</li>
+            <li>✅ Custom church logo & color scheme preloaded</li>
+            <li>✅ Direct phone/text emergency support for Sunday mornings</li>
+          </ul>
+          <a href="mailto:johndondlinger21@gmail.com?subject=Spoken%20Light%20On-Site%20Church%20Setup" class="btn-primary" style="text-align: center; background: #059669;">
+            Schedule On-Site Setup &rarr;
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- FOUNDER & CENTRAL WISCONSIN STORY -->
+    <section id="about" class="founder-card">
+      <div class="founder-avatar">🌲</div>
+      <div class="founder-content">
+        <h3>Built by John Dondlinger • Central Wisconsin Native</h3>
+        <p>
+          "I build high-reliability software right here in Wisconsin. When I saw local churches struggling to provide live subtitles for elderly and hearing-impaired parishioners—because Silicon Valley SaaS platforms were charging per-minute rates and locking them out with artificial 20-hour limits—I built Spoken Light.
+        </p>
+        <p style="margin-top: 10px;">
+          There are no foreign servers, no outsourced support queues, and no corporate investors dictating rate hikes. When you have a Sunday morning question or need your OBS soundboard dialed in, you speak directly with the guy who wrote the code."
+        </p>
+        <div style="margin-top: 14px; font-size: 0.88rem; color: #93c5fd; font-weight: 700;">
+          📞 Direct Inquiries: <a href="mailto:johndondlinger21@gmail.com" style="color:#60a5fa; text-decoration:none;">johndondlinger21@gmail.com</a> • Dondlinger Digital
+        </div>
+      </div>
+    </section>
+
+    <!-- FOOTER NAV -->
+    <footer class="console-links">
+      <a href="/booth" class="console-link-btn">🎛️ Volunteer Sound Booth</a>
+      <a href="/overlay" class="console-link-btn" target="_blank">📺 OBS Transparent Overlay</a>
+      <a href="/sermons" class="console-link-btn">📖 Pastor Sermon Notes Portal</a>
+    </footer>
   </div>
 
 </body>
