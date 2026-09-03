@@ -306,7 +306,7 @@
       <div class="title-group">
         <h1>📖 Calvary Sermon Archive <span class="badge-slice">Pastor Slice</span></h1>
         <div style="font-size:0.85rem; color:var(--muted); margin-top:2px;">
-          Calvary Baptist Church • AI Summaries, Detected Scriptures & Sliced Chapters
+          Calvary Baptist Church • Pastoral Study Notes, Detected Scriptures & Sliced Chapters
         </div>
       </div>
       <div style="display:flex; gap:10px;">
@@ -343,9 +343,9 @@
         <button id="modalCloseBtn" class="close-btn">&times;</button>
       </div>
 
-      <!-- AI SUMMARY -->
+      <!-- PASTORAL SUMMARY -->
       <div>
-        <div class="section-title">✨ AI Executive Summary (Llama 3.1 Edge)</div>
+        <div class="section-title">✨ Pastoral Executive Summary</div>
         <div id="modalSummary" class="ai-summary-box">Summary text...</div>
       </div>
 
@@ -531,7 +531,7 @@
         modalSpeaker.innerText = "Preached by " + sermon.speaker;
         modalDate.innerText = `Recorded: ${sermon.service_date} • ${Math.round((sermon.duration_seconds || 0) / 60)} min • ${sermon.wpm || 0} WPM`;
 
-        modalSummary.innerText = sermon.summary || "No AI summary generated.";
+        modalSummary.innerText = sermon.summary || "No pastoral study summary generated.";
 
         // Takeaways
         modalTakeaways.innerHTML = '';
@@ -574,10 +574,14 @@
             item.className = 'timeline-item';
             item.onclick = () => jumpToTimestamp(ch.start_time_ms);
             const anchorBadge = ch.scripture_anchor ? `<span class="scripture-chip" style="margin-left:8px;">📖 ${ch.scripture_anchor}</span>` : '';
+            const summaryRow = ch.summary ? `<div style="font-size:0.84rem; color:var(--muted); margin-top:4px; font-weight:normal;">${ch.summary}</div>` : '';
             item.innerHTML = `
-              <div class="timeline-title">
-                <span>Part ${ch.chapter_index}: ${ch.title}</span>
-                ${anchorBadge}
+              <div style="flex:1;">
+                <div class="timeline-title">
+                  <span>Part ${ch.chapter_index}: ${ch.title}</span>
+                  ${anchorBadge}
+                </div>
+                ${summaryRow}
               </div>
               <div class="timeline-time">${formatTime(ch.start_time_ms)}</div>
             `;
@@ -649,28 +653,50 @@
     downloadNotesBtn.addEventListener('click', () => {
       if (!activeSermonDetail) return;
       const { sermon, scriptures, chapters, captions } = activeSermonDetail;
-      let md = `# ${sermon.title}\n`;
+      let md = `# ${sermon.title}\n\n`;
       md += `**Preacher:** ${sermon.speaker}\n`;
-      md += `**Date:** ${sermon.service_date}\n\n`;
-      md += `## Executive Summary\n${sermon.summary || 'N/A'}\n\n`;
-      md += `## Key Takeaways\n`;
+      md += `**Church:** Calvary Baptist Church (Wisconsin Rapids, WI)\n`;
+      md += `**Date:** ${sermon.service_date}\n`;
+      md += `**Duration:** ${Math.round((sermon.duration_seconds || 0) / 60)} min | **Words:** ${sermon.word_count || 0} | **Pace:** ${sermon.wpm || 0} WPM\n\n`;
+      md += `---\n\n`;
+      md += `## Pastoral Executive Summary\n${sermon.summary || 'N/A'}\n\n`;
+      md += `## Key Biblical Takeaways\n`;
       try {
         const pts = JSON.parse(sermon.key_points || '[]');
-        pts.forEach(p => { md += `- ${p}\n`; });
+        if (pts.length > 0) {
+          pts.forEach(p => { md += `- ${p}\n`; });
+        } else {
+          md += `*No bullet takeaways recorded.*\n`;
+        }
       } catch(e) {}
-      md += `\n## Scriptures Cited\n`;
-      scriptures.forEach(s => { md += `- ${s.reference} (${formatTime(s.detected_at_ms)})\n`; });
-      md += `\n## Chapter Timeline\n`;
-      chapters.forEach(ch => { md += `- **${formatTime(ch.start_time_ms)}** - ${ch.title}\n`; });
-      md += `\n## Full Transcript\n`;
-      captions.forEach(c => { md += `[${formatTime(c.timestamp_ms)}] ${c.text}\n`; });
+      md += `\n## Scriptures Cited & Anchored\n`;
+      if (scriptures.length > 0) {
+        scriptures.forEach(s => { md += `- **${s.reference}** (${formatTime(s.detected_at_ms)})\n`; });
+      } else {
+        md += `*No scriptures explicitly cited.*\n`;
+      }
+      md += `\n## Structured Chapter Timeline\n`;
+      if (chapters.length > 0) {
+        chapters.forEach(ch => {
+          const anchor = ch.scripture_anchor ? ` [${ch.scripture_anchor}]` : '';
+          md += `### [${formatTime(ch.start_time_ms)}] Part ${ch.chapter_index}: ${ch.title}${anchor}\n`;
+          if (ch.summary) {
+            md += `> ${ch.summary}\n\n`;
+          } else {
+            md += `\n`;
+          }
+        });
+      }
+      md += `## Full Chronological Broadcast Transcript\n\n`;
+      captions.forEach(c => { md += `**[${formatTime(c.timestamp_ms)}]** ${c.text}\n\n`; });
+      md += `---\n*Transcribed live via Spoken Light • © 2026 DGC • John Dondlinger*\n`;
 
-      const blob = new Blob([md], { type: 'text/markdown' });
+      const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = `${sermon.title.replace(/[^a-z0-9]/gi, '_')}_notes.md`;
+      a.download = `${sermon.title.replace(/[^a-z0-9]/gi, '_')}_Pastoral_Notes.md`;
       a.click();
-      showToast("Downloaded sermon notes markdown!");
+      showToast("Downloaded pastoral study notes (.md)!");
     });
 
     loadTenants();

@@ -326,6 +326,7 @@
       </div>
       <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
         <button id="saveTranscriptBtn" class="btn-save-transcript">💾 Save Transcript (.txt)</button>
+        <button id="cheatSheetBtn" class="btn-action" style="background:#1e3a8a; border-color:#3b82f6; color:#93c5fd;">📋 Volunteer Cheat Sheet</button>
         <a href="/sermons" class="btn-action">📖 Sermon Notes</a>
         <button id="copyObsBtn" class="btn-action">📋 OBS Overlay Link</button>
       </div>
@@ -430,6 +431,56 @@
 
   <div id="toast" class="toast"></div>
 
+  <!-- SOUND BOOTH VOLUNTEER CHEAT SHEET MODAL -->
+  <div id="cheatSheetModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.85); backdrop-filter:blur(6px); z-index:9999; align-items:center; justify-content:center; padding:20px;">
+    <div style="background:#0d1527; border:1px solid #1e3a8a; border-radius:14px; max-width:640px; width:100%; padding:24px; box-shadow:0 12px 40px rgba(0,0,0,0.8); display:flex; flex-direction:column; gap:18px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #1f2937; padding-bottom:12px;">
+        <div style="font-size:1.2rem; font-weight:800; color:#fff; display:flex; align-items:center; gap:8px;">
+          📋 Sunday Sound Booth Volunteer Cheat Sheet
+        </div>
+        <button id="closeCheatSheetBtn" style="background:none; border:none; color:var(--muted); font-size:1.5rem; cursor:pointer;">&times;</button>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:14px; font-size:0.95rem; line-height:1.5;">
+        <div style="background:#111827; border-left:4px solid #22c55e; padding:12px 14px; border-radius:0 8px 8px 0;">
+          <b style="color:#22c55e;">Step 1: Check Input & VU Bounce</b>
+          <div style="color:var(--muted); font-size:0.88rem; margin-top:2px;">
+            Confirm <b>Soundboard Input Device</b> is selected in the dropdown below. When the pastor speaks into the lapel mic, verify the green VU meter is bouncing.
+          </div>
+        </div>
+
+        <div style="background:#111827; border-left:4px solid #3b82f6; padding:12px 14px; border-radius:0 8px 8px 0;">
+          <b style="color:#60a5fa;">Step 2: Start Service</b>
+          <div style="color:var(--muted); font-size:0.88rem; margin-top:2px;">
+            Click <b>▶ START LIVE CAPTIONS</b>. Subtitles will immediately appear in the teleprompter box below and broadcast to the OBS livestream overlay.
+          </div>
+        </div>
+
+        <div style="background:#111827; border-left:4px solid #f59e0b; padding:12px 14px; border-radius:0 8px 8px 0;">
+          <b style="color:#f59e0b;">Step 3: Spacebar for Worship Songs (Mute)</b>
+          <div style="color:var(--muted); font-size:0.88rem; margin-top:2px;">
+            Tap <kbd style="background:#1f2937; padding:2px 6px; border-radius:4px; border:1px solid #374151; color:#fff;">Spacebar</kbd> when congregation singing begins to mute captions so lyrics aren't garbled. Tap <kbd style="background:#1f2937; padding:2px 6px; border-radius:4px; border:1px solid #374151; color:#fff;">Spacebar</kbd> again when the pastor begins preaching.
+          </div>
+        </div>
+
+        <div style="background:#111827; border-left:4px solid #14b8a6; padding:12px 14px; border-radius:0 8px 8px 0;">
+          <b style="color:#14b8a6;">Step 4: Stop Service & Safety Backup</b>
+          <div style="color:var(--muted); font-size:0.88rem; margin-top:2px;">
+            Click <b>⏹ STOP LIVE CAPTIONS</b> at sermon conclusion. Click <b>💾 Save Transcript (.txt)</b> at any time for an instant local text file backup. <i>(If forgotten, the 15-min inactivity timer auto-finalizes and archives to Cloud D1).</i>
+          </div>
+        </div>
+
+        <div style="background:#090d16; border:1px dashed #334155; padding:10px 12px; border-radius:8px; font-size:0.82rem; color:#94a3b8;">
+          📺 <b>OBS Studio Setup:</b> Add Browser Source &rarr; URL: <code style="color:#93c5fd;">https://spokenlight.dondlingergc.com/overlay?tenant=calvary</code> &rarr; Width: 1920, Height: 250.
+        </div>
+      </div>
+
+      <button id="gotItCheatSheetBtn" class="btn-action" style="background:#1e3a8a; border-color:#2563eb; color:#fff; justify-content:center; padding:10px; font-weight:700;">
+        Got it, Ready for Sunday!
+      </button>
+    </div>
+  </div>
+
   <script>
     let isStreaming = false;
     let isArchiveArmed = true; // Armed by default
@@ -473,6 +524,25 @@
     const saveTranscriptBtn = document.getElementById('saveTranscriptBtn');
     const inlineSaveBtn = document.getElementById('inlineSaveBtn');
     const toast = document.getElementById('toast');
+    const cheatSheetBtn = document.getElementById('cheatSheetBtn');
+    const cheatSheetModal = document.getElementById('cheatSheetModal');
+    const closeCheatSheetBtn = document.getElementById('closeCheatSheetBtn');
+    const gotItCheatSheetBtn = document.getElementById('gotItCheatSheetBtn');
+
+    if (cheatSheetBtn) {
+      cheatSheetBtn.addEventListener('click', () => { cheatSheetModal.style.display = 'flex'; });
+    }
+    if (closeCheatSheetBtn) {
+      closeCheatSheetBtn.addEventListener('click', () => { cheatSheetModal.style.display = 'none'; });
+    }
+    if (gotItCheatSheetBtn) {
+      gotItCheatSheetBtn.addEventListener('click', () => { cheatSheetModal.style.display = 'none'; });
+    }
+    if (cheatSheetModal) {
+      cheatSheetModal.addEventListener('click', (e) => {
+        if (e.target === cheatSheetModal) cheatSheetModal.style.display = 'none';
+      });
+    }
 
     function showToast(msg, bg = "#16a34a") {
       toast.style.background = bg;
@@ -689,7 +759,7 @@
         archiveTimerInterval = null;
       }
       archiveHud.style.display = 'none';
-      showToast("💾 Sermon Archive Finalized! AI synthesizing notes & chapters.", "#0f766e");
+      showToast("💾 Sermon Archive Finalized! Compiling pastoral study notes & chapters.", "#0f766e");
     }
 
     let heartbeatInterval = null;
