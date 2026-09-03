@@ -691,14 +691,26 @@
       showToast("💾 Sermon Archive Finalized! AI synthesizing notes & chapters.", "#0f766e");
     }
 
+    let heartbeatInterval = null;
+
     function connectWebSocket() {
       if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
       const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-      ws = new WebSocket(`${protocol}//${location.host}/api/ws`);
+      const tenantParam = new URLSearchParams(window.location.search).get('tenant') || '';
+      const wsUrl = `${protocol}//${location.host}/api/ws${tenantParam ? '?tenant=' + encodeURIComponent(tenantParam) : ''}`;
+      ws = new WebSocket(wsUrl);
       ws.binaryType = 'arraybuffer';
 
       ws.onopen = () => {
         console.log("WebSocket connected to Spoken Light Edge");
+        if (heartbeatInterval) clearInterval(heartbeatInterval);
+        // 25-second WebSocket keepalive heartbeat
+        heartbeatInterval = setInterval(() => {
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send("ping");
+          }
+        }, 25000);
+
         if (isStreaming && isArchiveArmed && !isRecordingArchive) {
           startArchiveRecording();
         }
@@ -707,7 +719,9 @@
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          if (data.type === 'caption' && data.text) {
+          if (data.type === 'pong') {
+            return; // Heartbeat healthy
+          } else if (data.type === 'caption' && data.text) {
             pushAdminCaption(data.text);
           } else if (data.type === 'clear') {
             adminSentenceStack = [];
@@ -739,6 +753,10 @@
 
       ws.onclose = () => {
         ws = null;
+        if (heartbeatInterval) {
+          clearInterval(heartbeatInterval);
+          heartbeatInterval = null;
+        }
         setTimeout(connectWebSocket, 2000);
       };
     }

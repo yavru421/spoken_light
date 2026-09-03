@@ -317,7 +317,11 @@
 
     <!-- SEARCH & FILTER -->
     <div class="search-row">
-      <input type="text" id="searchInput" placeholder="Search sermons by title, preacher, scripture (e.g. John 3:16), or keywords...">
+      <input type="text" id="searchInput" placeholder="Search sermons by title, scripture, speaker, or keyword...">
+      <select id="tenantSelect" style="max-width:220px; background:#0f172a; border:1px solid var(--border); border-radius:8px; color:#fff; padding:10px 14px; font-size:0.95rem;">
+        <option value="all">All Churches / Tenants</option>
+        <option value="calvary" selected>Calvary Baptist Church</option>
+      </select>
       <button id="refreshBtn" class="btn-action">🔄 Refresh</button>
     </div>
 
@@ -413,14 +417,51 @@
       return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
     }
 
+    let activeTenant = 'all';
+
+    async function loadTenants() {
+      try {
+        const res = await fetch('/api/tenants');
+        const tenants = await res.json();
+        const tenantSelect = document.getElementById('tenantSelect');
+        if (tenants && tenants.length > 0 && tenantSelect) {
+          tenantSelect.innerHTML = '<option value="all">All Churches / Tenants</option>';
+          tenants.forEach(t => {
+            const opt = document.createElement('option');
+            opt.value = t.id;
+            opt.innerText = t.name;
+            tenantSelect.appendChild(opt);
+          });
+          const urlTenant = new URLSearchParams(window.location.search).get('tenant');
+          if (urlTenant) {
+            tenantSelect.value = urlTenant;
+            activeTenant = urlTenant;
+          }
+        }
+      } catch (e) {
+        console.error("Failed to load tenants:", e);
+      }
+    }
+
     async function loadSermons() {
       try {
-        const res = await fetch('/api/sermons');
+        const tenantSelect = document.getElementById('tenantSelect');
+        const tenantQuery = tenantSelect && tenantSelect.value ? tenantSelect.value : activeTenant;
+        const url = tenantQuery && tenantQuery !== 'all' ? `/api/sermons?tenant=${encodeURIComponent(tenantQuery)}` : '/api/sermons';
+        const res = await fetch(url);
         sermons = await res.json();
         renderSermons(sermons);
       } catch (err) {
         sermonGrid.innerHTML = `<div style="color:#ef4444; padding:20px;">Error loading sermons: ${err.message}</div>`;
       }
+    }
+
+    const tenantSelect = document.getElementById('tenantSelect');
+    if (tenantSelect) {
+      tenantSelect.addEventListener('change', () => {
+        activeTenant = tenantSelect.value;
+        loadSermons();
+      });
     }
 
     function renderSermons(list) {
@@ -632,6 +673,7 @@
       showToast("Downloaded sermon notes markdown!");
     });
 
+    loadTenants();
     loadSermons();
   </script>
 </body>
