@@ -361,10 +361,9 @@
         🎙️ Spoken Light <span class="badge-wi">Central Wisconsin Built</span>
       </div>
       <nav class="nav-links">
-        <a href="#why" class="btn-nav">Why Us</a>
-        <a href="#pricing" class="btn-nav">Pricing & Setup</a>
-        <a href="#about" class="btn-nav">About John</a>
-        <a href="/booth" class="btn-primary">Open Sound Booth Console &rarr;</a>
+        <a href="/sermons" class="btn-nav">📖 Sermon Notes</a>
+        <a href="/overlay" class="btn-nav" target="_blank">📺 OBS Overlay</a>
+        <a href="/booth" class="btn-primary">Enter Sound Booth &rarr;</a>
       </nav>
     </header>
 
@@ -373,21 +372,24 @@
       <div class="hero-tag">
         📍 Hand-Crafted in Central Wisconsin • Zero Corporate Middlemen
       </div>
-      <h1>Live Broadcast Captions That <span>Don’t Nickel-and-Dime</span> Your Church.</h1>
+      <h1>Live Broadcast Captions Built for <span>Church Soundboards</span>.</h1>
       <p class="hero-p">
-        Most captioning software forces churches to choose between serving the hearing-impaired and counting every minute so they don’t exceed a 20-hour monthly cap. Spoken Light delivers unlimited live speech-to-text subtitles, instant OBS broadcast transparency, and scripture-anchored pastor notes without minute limits.
+        Spoken Light delivers unlimited live speech-to-text broadcast subtitles, instant OBS transparent lower-thirds, scripture-anchored chapter slicing, and post-service pastoral study notes.
       </p>
-      <div class="hero-cta-group">
-        <a href="/booth" class="btn-primary" style="padding: 14px 28px; font-size: 1.05rem;">
-          Try the Sound Booth Demo (Free)
+
+      <!-- FRONT AND CENTER ENTER SOUND BOOTH CTA -->
+      <div class="hero-cta-group" style="margin-top: 8px;">
+        <a href="/booth" class="btn-primary" style="padding: 20px 48px; font-size: 1.35rem; font-weight: 800; border-radius: 12px; display: inline-flex; align-items: center; gap: 12px; box-shadow: 0 8px 32px var(--accent-glow); text-transform: uppercase; letter-spacing: 0.03em;">
+          🎙️ ENTER THE SOUND BOOTH CONSOLE &rarr;
         </a>
-        <a href="#setup" class="btn-nav" style="border: 1px solid var(--card-border); padding: 14px 22px;">
-          Book In-Person Setup in Wisconsin
-        </a>
+      </div>
+      <div style="display:flex; gap:12px; flex-wrap:wrap; justify-content:center; margin-top:4px;">
+        <a href="/sermons" class="btn-nav" style="border: 1px solid var(--card-border); padding: 10px 18px; font-weight:700;">📖 Pastoral Study Notes Archive</a>
+        <a href="/overlay" class="btn-nav" target="_blank" style="border: 1px solid var(--card-border); padding: 10px 18px; font-weight:700;">📺 Live OBS Transparent Overlay</a>
       </div>
 
       <!-- THE GREAT COMMISSION RADIO TOWER VISUAL -->
-      <div style="width:100%; max-width:880px; margin-top:28px; border-radius:16px; overflow:hidden; border:1px solid #1e293b; background:#020617; box-shadow:0 24px 64px rgba(0,0,0,0.8); position:relative;">
+      <div style="width:100%; max-width:880px; margin-top:24px; border-radius:16px; overflow:hidden; border:1px solid #1e293b; background:#020617; box-shadow:0 24px 64px rgba(0,0,0,0.8); position:relative;">
         <div style="position:relative; width:100%; height:auto; overflow:hidden;">
           <img src="/tower.jpg" alt="Spoken Light — Remote Ridge Broadcast Tower & Mission Aircraft" style="width:100%; height:auto; display:block; filter:brightness(0.95); transition:transform 0.4s ease;">
           <div style="position:absolute; bottom:0; left:0; right:0; padding:24px; background:linear-gradient(180deg, transparent 0%, rgba(2,6,23,0.92) 80%, #020617 100%); display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:12px;">
@@ -403,27 +405,6 @@
               © 2026 DGC • John Dondlinger
             </div>
           </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- THE PROBLEM / THE INDUSTRY RACKET -->
-    <section id="why" class="racket-card">
-      <div class="racket-title">
-        ⚠️ Why Traditional "Church Caption Apps" Fail Sunday Volunteers
-      </div>
-      <div class="racket-grid">
-        <div class="racket-item">
-          <b>1. Aggressive 20-Hour Billing Traps</b>
-          <p>Selah Translate and competitors charge $29 to $49/mo for just 20 to 40 hours. If your church runs Wednesday prayer meetings, youth group, and dual Sunday services, you get hit with surprise bills.</p>
-        </div>
-        <div class="racket-item">
-          <b>2. Zero OBS Livestream Integration</b>
-          <p>Most platforms only show text on a congregant's mobile browser via a QR code. They don’t feed directly into OBS Studio or your livestream switcher as a transparent lower-third graphic.</p>
-        </div>
-        <div class="racket-item">
-          <b>3. Too Complex for High School Sound Booths</b>
-          <p>Your audio booth is run by volunteers and high school students. They don’t need complex cloud dashboards; they need a single START button and a spacebar to mute worship songs.</p>
         </div>
       </div>
     </section>
@@ -472,52 +453,7 @@
       </div>
     </section>
 
-    <!-- PRICING & LOCAL PACKAGES -->
-    <section id="pricing">
-      <h2 class="section-title">Transparent Church Pricing</h2>
-      <p class="section-sub">No minute meters. No hidden overages. Real software priced for local ministry budgets.</p>
 
-      <div class="pricing-grid">
-        <!-- Self-Managed Plan -->
-        <div class="pricing-card">
-          <div>
-            <div style="font-weight: 800; color: #93c5fd; font-size: 1.1rem; margin-bottom: 8px;">Unlimited Church Cloud</div>
-            <div class="price-num">$29 <span style="font-size: 1rem; color: var(--muted); font-weight: 500;">/ month</span></div>
-            <p class="price-sub" style="margin-top: 6px;">For churches with an existing tech volunteer or sound director.</p>
-          </div>
-          <ul class="price-features">
-            <li>✅ <b>Unlimited Streaming Hours</b> (No 20h cap)</li>
-            <li>✅ Dedicated Church Subdomain (e.g. <code>grace.spokenlight.app</code>)</li>
-            <li>✅ OBS Transparent Lower-Third Overlay</li>
-            <li>✅ Automatic Scripture Chapter Slicing</li>
-            <li>✅ Pastoral Study Notes & Bulleted Takeaways</li>
-            <li>✅ Local Volunteer Sound Booth Console</li>
-          </ul>
-          <a href="/booth" class="btn-primary" style="text-align: center;">Get Started Direct</a>
-        </div>
-
-        <!-- White-Glove In-Person Setup Plan -->
-        <div class="pricing-card featured" id="setup">
-          <div class="pricing-badge">Recommended for Wisconsin Churches</div>
-          <div>
-            <div style="font-weight: 800; color: var(--gold); font-size: 1.1rem; margin-bottom: 8px;">On-Site White-Glove Setup</div>
-            <div class="price-num">$249 <span style="font-size: 1rem; color: var(--muted); font-weight: 500;">one-time setup</span></div>
-            <p class="price-sub" style="margin-top: 6px;">Then $29/mo for unlimited cloud hosting.</p>
-          </div>
-          <ul class="price-features">
-            <li>✅ <b>I come directly to your church sound booth</b> (Central WI / Marathon / Wood / Portage / Lincoln counties)</li>
-            <li>✅ Direct USB/XLR audiobox calibration into Spoken Light</li>
-            <li>✅ OBS Studio / ATEM Switcher browser overlay configuration</li>
-            <li>✅ 30-minute training session with your Sunday AV volunteers</li>
-            <li>✅ Custom church logo & color scheme preloaded</li>
-            <li>✅ Direct phone/text emergency support for Sunday mornings</li>
-          </ul>
-          <a href="mailto:dondlingergeneralcontracting@gmail.com?subject=Spoken%20Light%20On-Site%20Church%20Setup" class="btn-primary" style="text-align: center; background: #059669;">
-            Schedule On-Site Setup &rarr;
-          </a>
-        </div>
-      </div>
-    </section>
 
     <!-- FOUNDER & CENTRAL WISCONSIN STORY -->
     <section id="about" class="founder-card">

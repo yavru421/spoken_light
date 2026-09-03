@@ -417,14 +417,14 @@
       return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
     }
 
-    let activeTenant = 'all';
+    let activeTenant = 'calvary';
 
     async function loadTenants() {
       try {
         const res = await fetch('/api/tenants');
         const tenants = await res.json();
         const tenantSelect = document.getElementById('tenantSelect');
-        if (tenants && tenants.length > 0 && tenantSelect) {
+        if (Array.isArray(tenants) && tenants.length > 0 && tenantSelect) {
           tenantSelect.innerHTML = '<option value="all">All Churches / Tenants</option>';
           tenants.forEach(t => {
             const opt = document.createElement('option');
@@ -436,6 +436,9 @@
           if (urlTenant) {
             tenantSelect.value = urlTenant;
             activeTenant = urlTenant;
+          } else {
+            tenantSelect.value = 'calvary';
+            activeTenant = 'calvary';
           }
         }
       } catch (e) {
@@ -449,8 +452,15 @@
         const tenantQuery = tenantSelect && tenantSelect.value ? tenantSelect.value : activeTenant;
         const url = tenantQuery && tenantQuery !== 'all' ? `/api/sermons?tenant=${encodeURIComponent(tenantQuery)}` : '/api/sermons';
         const res = await fetch(url);
-        sermons = await res.json();
-        renderSermons(sermons);
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          sermons = data;
+          renderSermons(sermons);
+        } else if (data && data.error) {
+          sermonGrid.innerHTML = `<div style="color:#ef4444; padding:20px;">Notice: ${data.error}</div>`;
+        } else {
+          renderSermons([]);
+        }
       } catch (err) {
         sermonGrid.innerHTML = `<div style="color:#ef4444; padding:20px;">Error loading sermons: ${err.message}</div>`;
       }
@@ -699,8 +709,11 @@
       showToast("Downloaded pastoral study notes (.md)!");
     });
 
-    loadTenants();
-    loadSermons();
+    async function init() {
+      await loadTenants();
+      await loadSermons();
+    }
+    init();
   </script>
 </body>
 </html>
