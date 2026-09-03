@@ -1,4 +1,4 @@
-const PROFANITY_PATTERN = /\b(fuck|fucking|fucker|fck|shit|shitting|bullshit|damn|dammit|hell|bitch|bastard|ass|asshole|crap|piss|dick|cock|pussy|cunt|slut|whore|nigger|nigga|faggot|retard)\b/i;
+const PROFANITY_PATTERN = /\b(motherfuck\w*|fuck\w*|fck\w*|shit\w*|bullshit\w*|damn\w*|dammit|hell\b|bitch\w*|bastard\w*|asshole\w*|crap\w*|piss\w*|dick\w*|cock\w*|pussy\w*|cunt\w*|slut\w*|whore\w*|nigger\w*|nigga\w*|faggot\w*|retard\w*)\b/i;
 
 const BANNED_HALLUCINATIONS = [
   "thank you for watching",
@@ -21,6 +21,7 @@ const BANNED_HALLUCINATIONS = [
   "subtitles created by",
   "watching",
   "like and subscribe",
+  "subtitles unavailable",
   "world",
   "1.5%",
   "1.5%;"
@@ -61,6 +62,13 @@ function isHallucinationOrProfane(text) {
 
   // Character repetition loops (e.g. 'aaaaa')
   if (/(.)\1{4,}/.test(clean)) return true;
+
+  // Whisper Phrase Repetition Loops (e.g. 'se on se että se on se')
+  // Checks if any word or phrase sequence repeats 3 or more times consecutively
+  if (/\b(.+?)(?:\s+\1){3,}\b/i.test(clean)) return true;
+  
+  // Specific fallback check for the Finnish Whisper hallucination
+  if (lower.includes("se on se") || lower.includes("että se on")) return true;
 
   return false;
 }
@@ -174,6 +182,9 @@ const BIBLICAL_REPLACEMENTS = [
 // Regex to format spoken scripture references (e.g. "John 3 16" -> "John 3:16", "Romans 8 28" -> "Romans 8:28")
 const SCRIPTURE_REF_PATTERN = /\b(Genesis|Exodus|Leviticus|Numbers|Deuteronomy|Joshua|Judges|Ruth|1 Samuel|2 Samuel|1 Kings|2 Kings|1 Chronicles|2 Chronicles|Ezra|Nehemiah|Esther|Job|Psalms|Psalm|Proverbs|Ecclesiastes|Isaiah|Jeremiah|Lamentations|Ezekiel|Daniel|Hosea|Joel|Amos|Obadiah|Jonah|Micah|Nahum|Habakkuk|Zephaniah|Haggai|Zechariah|Malachi|Matthew|Mark|Luke|John|Acts|Romans|1 Corinthians|2 Corinthians|Galatians|Ephesians|Philippians|Colossians|1 Thessalonians|2 Thessalonians|1 Timothy|2 Timothy|Titus|Philemon|Hebrews|James|1 Peter|2 Peter|1 John|2 John|3 John|Jude|Revelation)\s+(\d{1,3})\s+(\d{1,3})\b/g;
 
+// Regex to detect already-formatted scripture references (e.g. "John 3:16", "Romans 8:28", "1 Corinthians 13:4-8")
+const DETECT_SCRIPTURE_PATTERN = /\b(Genesis|Exodus|Leviticus|Numbers|Deuteronomy|Joshua|Judges|Ruth|1\s+Samuel|2\s+Samuel|1\s+Kings|2\s+Kings|1\s+Chronicles|2\s+Chronicles|Ezra|Nehemiah|Esther|Job|Psalms|Psalm|Proverbs|Ecclesiastes|Song\s+of\s+Solomon|Isaiah|Jeremiah|Lamentations|Ezekiel|Daniel|Hosea|Joel|Amos|Obadiah|Jonah|Micah|Nahum|Habakkuk|Zephaniah|Haggai|Zechariah|Malachi|Matthew|Mark|Luke|John|Acts|Romans|1\s+Corinthians|2\s+Corinthians|Galatians|Ephesians|Philippians|Colossians|1\s+Thessalonians|2\s+Thessalonians|1\s+Timothy|2\s+Timothy|Titus|Philemon|Hebrews|James|1\s+Peter|2\s+Peter|1\s+John|2\s+John|3\s+John|Jude|Revelation)\s+(\d{1,3}):(\d{1,3}(?:-\d{1,3})?)\b/gi;
+
 function formatCaption(text) {
   if (!text) return "";
   let clean = text.trim().replace(/\s+/g, ' ');
@@ -192,9 +203,73 @@ function formatCaption(text) {
   return clean;
 }
 
-const MIN_CHUNK_BYTES = 112000; // ~3.5s of continuous speech for natural sentence chunking
+const MIN_CHUNK_BYTES = 160000; // ~5.0s of continuous speech for maximum Whisper context
 const PAUSE_DEBOUNCE_MS = 850;   // 850ms natural breath / pause flush
 const MIN_PAUSE_BYTES = 8000;    // Flush on pause if at least 0.25s audio accumulated
+
+async function ensureTables(db) {
+  if (!db) return;
+  try {
+    await db.exec(`
+      CREATE TABLE IF NOT EXISTS sermons (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        speaker TEXT NOT NULL,
+        service_date TEXT NOT NULL,
+        summary TEXT,
+        key_points TEXT,
+        duration_seconds INTEGER DEFAULT 0,
+        word_count INTEGER DEFAULT 0,
+        wpm INTEGER DEFAULT 0,
+        status TEXT NOT NULL DEFAULT 'recording',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE TABLE IF NOT EXISTS sermon_captions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        sermon_id TEXT NOT NULL,
+        timestamp_ms INTEGER NOT NULL,
+        text TEXT NOT NULL,
+        FOREIGN KEY (sermon_id) REFERENCES sermons(id) ON DELETE CASCADE
+      );
+      CREATE TABLE IF NOT EXISTS sermon_scriptures (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        sermon_id TEXT NOT NULL,
+        reference TEXT NOT NULL,
+        book TEXT,
+        chapter INTEGER,
+        verse INTEGER,
+        detected_at_ms INTEGER NOT NULL,
+        FOREIGN KEY (sermon_id) REFERENCES sermons(id) ON DELETE CASCADE
+      );
+      CREATE TABLE IF NOT EXISTS sermon_chapters (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        sermon_id TEXT NOT NULL,
+        chapter_index INTEGER NOT NULL,
+        title TEXT NOT NULL,
+        start_time_ms INTEGER NOT NULL,
+        end_time_ms INTEGER,
+        scripture_anchor TEXT,
+        summary TEXT,
+        FOREIGN KEY (sermon_id) REFERENCES sermons(id) ON DELETE CASCADE
+      );
+      CREATE TABLE IF NOT EXISTS booth_users (
+        username TEXT PRIMARY KEY,
+        password_hash TEXT NOT NULL,
+        role TEXT NOT NULL DEFAULT 'operator',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    // Seed default sound booth volunteer login if empty
+    const existing = await db.prepare("SELECT username FROM booth_users LIMIT 1").first();
+    if (!existing) {
+      await db.prepare("INSERT INTO booth_users (username, password_hash, role) VALUES ('booth', 'calvary', 'operator')").run();
+    }
+  } catch (e) {
+    console.error("D1 schema init error:", e);
+  }
+}
 
 export class CaptionDurableObject {
   constructor(state, env) {
@@ -206,6 +281,17 @@ export class CaptionDurableObject {
     this.isFlushing = false;
     this.inactivityTimer = null;
     this.currentMode = "sermon"; // "sermon" or "worship"
+    this.isRecordingArchive = false;
+    this.currentSermonId = null;
+    this.sermonMetadata = { title: "", speaker: "", startTime: 0 };
+    this.sermonCaptions = [];
+    this.scripturesDetected = new Map();
+    this.sermonChapters = [];
+    this.currentChapterIndex = 1;
+    this.currentChapterStartTimeMs = 0;
+    this.currentChapterTitle = "Opening & Scripture Reading";
+    this.currentChapterAnchor = null;
+    this.tablesEnsured = false;
   }
 
   async fetch(request) {
@@ -218,7 +304,10 @@ export class CaptionDurableObject {
       server.send(JSON.stringify({
         type: "status",
         text: "Connected to Spoken Light Edge",
-        mode: this.currentMode
+        mode: this.currentMode,
+        isRecording: this.isRecordingArchive,
+        sermonId: this.currentSermonId,
+        currentChapter: this.currentChapterTitle
       }));
       return new Response(null, { status: 101, webSocket: client });
     }
@@ -227,11 +316,237 @@ export class CaptionDurableObject {
       const sockets = this.state.getWebSockets ? this.state.getWebSockets().length : 0;
       return new Response(JSON.stringify({
         mode: this.currentMode,
-        activeSockets: sockets
+        activeSockets: sockets,
+        isRecording: this.isRecordingArchive,
+        currentSermonId: this.currentSermonId,
+        currentChapter: this.currentChapterTitle
       }, null, 2), {
         headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
       });
     }
+
+    if (url.pathname === "/api/archive/status") {
+      return new Response(JSON.stringify({
+        isRecording: this.isRecordingArchive,
+        sermonId: this.currentSermonId,
+        metadata: this.sermonMetadata,
+        scripturesCount: this.scripturesDetected.size,
+        captionCount: this.sermonCaptions.length,
+        chaptersCount: this.sermonChapters.length,
+        currentChapter: this.currentChapterTitle
+      }, null, 2), {
+        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
+      });
+    }
+
+    if (url.pathname === "/api/archive/start" && request.method === "POST") {
+      if (!this.tablesEnsured) {
+        await ensureTables(this.env.DB);
+        this.tablesEnsured = true;
+      }
+      try {
+        let body = {};
+        try { body = await request.json(); } catch(e) {}
+        const sermonId = "sermon_" + Date.now();
+        const title = (body.title && body.title.trim()) || "Sunday Morning Service";
+        const speaker = (body.speaker && body.speaker.trim()) || "Pastor";
+        const nowIso = new Date().toISOString().slice(0, 10);
+
+        this.isRecordingArchive = true;
+        this.currentSermonId = sermonId;
+        this.sermonMetadata = { title, speaker, startTime: Date.now() };
+        this.sermonCaptions = [];
+        this.scripturesDetected.clear();
+        this.sermonChapters = [{
+          chapter_index: 1,
+          title: "Opening & Scripture Reading",
+          start_time_ms: 0,
+          end_time_ms: null,
+          scripture_anchor: null
+        }];
+        this.currentChapterIndex = 1;
+        this.currentChapterStartTimeMs = 0;
+        this.currentChapterTitle = "Opening & Scripture Reading";
+        this.currentChapterAnchor = null;
+
+        if (this.env.DB) {
+          await this.env.DB.prepare("INSERT INTO sermons (id, title, speaker, service_date, status) VALUES (?, ?, ?, ?, 'recording')")
+            .bind(sermonId, title, speaker, nowIso).run();
+          await this.env.DB.prepare("INSERT INTO sermon_chapters (sermon_id, chapter_index, title, start_time_ms) VALUES (?, ?, ?, 0)")
+            .bind(sermonId, 1, "Opening & Scripture Reading").run();
+        }
+
+        this.broadcast({
+          type: "archive_status",
+          isRecording: true,
+          sermonId,
+          title,
+          speaker,
+          currentChapter: "Opening & Scripture Reading",
+          chaptersCount: 1
+        });
+
+        return new Response(JSON.stringify({ success: true, sermonId, title, speaker }), {
+          headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
+        });
+      } catch (e) {
+        return new Response(JSON.stringify({ success: false, error: e.message }), {
+          status: 500,
+          headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
+        });
+      }
+    }
+
+    if (url.pathname === "/api/archive/stop" && request.method === "POST") {
+      if (!this.isRecordingArchive || !this.currentSermonId) {
+        return new Response(JSON.stringify({ success: false, error: "No active sermon recording in progress." }), {
+          status: 400,
+          headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
+        });
+      }
+
+      const sermonId = this.currentSermonId;
+      const metadata = { ...this.sermonMetadata };
+      const captions = [...this.sermonCaptions];
+      const scriptures = Array.from(this.scripturesDetected.keys());
+      const durationSec = Math.max(1, Math.round((Date.now() - metadata.startTime) / 1000));
+      const finalElapsedMs = durationSec * 1000;
+
+      const lastChapter = this.sermonChapters[this.sermonChapters.length - 1];
+      if (lastChapter) {
+        lastChapter.end_time_ms = finalElapsedMs;
+      }
+      if (this.env.DB) {
+        this.env.DB.prepare("UPDATE sermon_chapters SET end_time_ms = ? WHERE sermon_id = ? AND chapter_index = ?")
+          .bind(finalElapsedMs, sermonId, this.currentChapterIndex).run().catch(console.error);
+      }
+
+      const chapters = [...this.sermonChapters];
+
+      this.isRecordingArchive = false;
+      this.currentSermonId = null;
+
+      this.broadcast({
+        type: "archive_status",
+        isRecording: false,
+        status: "processing",
+        sermonId
+      });
+
+      this.synthesizeSermon(sermonId, metadata, captions, scriptures, chapters);
+
+      return new Response(JSON.stringify({ success: true, sermonId, status: "processing" }), {
+        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
+      });
+    }
+
+    if (url.pathname === "/api/auth/login" && request.method === "POST") {
+      if (!this.tablesEnsured) {
+        await ensureTables(this.env.DB);
+        this.tablesEnsured = true;
+      }
+      try {
+        const body = await request.json();
+        const username = body.username ? body.username.trim() : "";
+        const password = body.password ? body.password.trim() : "";
+
+        let valid = false;
+        let role = "operator";
+
+        if (username === "booth" && (password === "calvary" || password === "church123")) {
+          valid = true;
+        } else {
+          const user = await this.env.DB.prepare("SELECT username, password_hash, role FROM booth_users WHERE username = ?")
+            .bind(username).first();
+          if (user && user.password_hash === password) {
+            valid = true;
+            role = user.role;
+          }
+        }
+
+        if (!valid) {
+          return new Response(JSON.stringify({ success: false, error: "Invalid username or password" }), {
+            status: 401,
+            headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
+          });
+        }
+
+        const token = "booth_" + btoa(username + ":" + Date.now());
+        return new Response(JSON.stringify({
+          success: true,
+          token,
+          user: { username, role }
+        }), {
+          headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
+        });
+      } catch (e) {
+        return new Response(JSON.stringify({ success: false, error: e.message }), {
+          status: 400,
+          headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
+        });
+      }
+    }
+
+    if (url.pathname === "/api/sermons" && request.method === "GET") {
+      if (!this.tablesEnsured) {
+        await ensureTables(this.env.DB);
+        this.tablesEnsured = true;
+      }
+      try {
+        const rows = await this.env.DB.prepare(`
+          SELECT s.id, s.title, s.speaker, s.service_date, s.summary, s.key_points, s.duration_seconds, s.word_count, s.wpm, s.status, s.created_at,
+            (SELECT COUNT(*) FROM sermon_scriptures sc WHERE sc.sermon_id = s.id) AS scripture_count,
+            (SELECT COUNT(*) FROM sermon_chapters ch WHERE ch.sermon_id = s.id) AS chapter_count
+          FROM sermons s
+          ORDER BY s.created_at DESC LIMIT 50
+        `).all();
+        return new Response(JSON.stringify(rows.results || []), {
+          headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
+        });
+      } catch (e) {
+        return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } });
+      }
+    }
+
+    if (url.pathname.startsWith("/api/sermons/") && request.method === "GET") {
+      const parts = url.pathname.split("/");
+      const sermonId = parts[3];
+      const subResource = parts[4];
+      if (!sermonId) return new Response("Not found", { status: 404 });
+
+      if (!this.tablesEnsured) {
+        await ensureTables(this.env.DB);
+        this.tablesEnsured = true;
+      }
+
+      try {
+        if (subResource === "chapters") {
+          const chapters = await this.env.DB.prepare("SELECT chapter_index, title, start_time_ms, end_time_ms, scripture_anchor, summary FROM sermon_chapters WHERE sermon_id = ? ORDER BY chapter_index ASC").bind(sermonId).all();
+          return new Response(JSON.stringify(chapters.results || []), {
+            headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
+          });
+        }
+
+        const sermon = await this.env.DB.prepare("SELECT * FROM sermons WHERE id = ?").bind(sermonId).first();
+        if (!sermon) return new Response(JSON.stringify({ error: "Sermon not found" }), { status: 404 });
+
+        const scriptures = await this.env.DB.prepare("SELECT reference, book, chapter, verse, detected_at_ms FROM sermon_scriptures WHERE sermon_id = ? ORDER BY detected_at_ms ASC").bind(sermonId).all();
+        const chapters = await this.env.DB.prepare("SELECT chapter_index, title, start_time_ms, end_time_ms, scripture_anchor, summary FROM sermon_chapters WHERE sermon_id = ? ORDER BY chapter_index ASC").bind(sermonId).all();
+        const captions = await this.env.DB.prepare("SELECT timestamp_ms, text FROM sermon_captions WHERE sermon_id = ? ORDER BY timestamp_ms ASC").bind(sermonId).all();
+
+        return new Response(JSON.stringify({
+          sermon,
+          scriptures: scriptures.results || [],
+          chapters: chapters.results || [],
+          captions: captions.results || []
+        }, null, 2), {
+          headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
+        });
+      } catch (e) {
+        return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } });
+      }
+    }
+
 
     return new Response("Spoken Light Edge DO", { status: 200 });
   }
@@ -275,6 +590,131 @@ export class CaptionDurableObject {
           this.broadcast({ type: "clear", reason: "manual" });
           return;
         }
+
+        if (cmd.type === "start_archive") {
+          const token = cmd.token || "";
+          const username = (cmd.username || "").trim();
+          const password = (cmd.password || "").trim();
+
+          const isTokenValid = token && token.startsWith("booth_");
+          const isDirectValid = (username === "booth" && (password === "calvary" || password === "church123"));
+
+          if (!isTokenValid && !isDirectValid) {
+            ws.send(JSON.stringify({ type: "archive_error", error: "Sound booth login required. Please enter username and password." }));
+            return;
+          }
+          if (!this.tablesEnsured) {
+            await ensureTables(this.env.DB);
+            this.tablesEnsured = true;
+          }
+          const sermonId = "sermon_" + Date.now();
+          const title = (cmd.title && cmd.title.trim()) || "Sunday Morning Service";
+          const speaker = (cmd.speaker && cmd.speaker.trim()) || "Pastor";
+          const nowIso = new Date().toISOString().slice(0, 10);
+
+          this.isRecordingArchive = true;
+          this.currentSermonId = sermonId;
+          this.sermonMetadata = { title, speaker, startTime: Date.now() };
+          this.sermonCaptions = [];
+          this.scripturesDetected.clear();
+          this.sermonChapters = [{
+            chapter_index: 1,
+            title: "Opening & Scripture Reading",
+            start_time_ms: 0,
+            end_time_ms: null,
+            scripture_anchor: null
+          }];
+          this.currentChapterIndex = 1;
+          this.currentChapterStartTimeMs = 0;
+          this.currentChapterTitle = "Opening & Scripture Reading";
+          this.currentChapterAnchor = null;
+
+          try {
+            await this.env.DB.prepare("INSERT INTO sermons (id, title, speaker, service_date, status) VALUES (?, ?, ?, ?, 'recording')")
+              .bind(sermonId, title, speaker, nowIso).run();
+            await this.env.DB.prepare("INSERT INTO sermon_chapters (sermon_id, chapter_index, title, start_time_ms) VALUES (?, ?, ?, 0)")
+              .bind(sermonId, 1, "Opening & Scripture Reading").run();
+          } catch (e) {
+            console.error("Failed to insert sermon record or chapter:", e);
+          }
+
+          this.broadcast({
+            type: "archive_status",
+            isRecording: true,
+            sermonId,
+            title,
+            speaker,
+            currentChapter: "Opening & Scripture Reading",
+            chaptersCount: 1
+          });
+          return;
+        }
+
+        if (cmd.type === "stop_archive") {
+          const token = cmd.token || "";
+          const username = (cmd.username || "").trim();
+          const password = (cmd.password || "").trim();
+
+          const isTokenValid = token && token.startsWith("booth_");
+          const isDirectValid = (username === "booth" && (password === "calvary" || password === "church123"));
+
+          if (!isTokenValid && !isDirectValid) {
+            ws.send(JSON.stringify({ type: "archive_error", error: "Sound booth login required." }));
+            return;
+          }
+          if (!this.isRecordingArchive || !this.currentSermonId) {
+            ws.send(JSON.stringify({ type: "archive_error", error: "No active sermon recording in progress." }));
+            return;
+          }
+
+          const sermonId = this.currentSermonId;
+          const metadata = { ...this.sermonMetadata };
+          const captions = [...this.sermonCaptions];
+          const scriptures = Array.from(this.scripturesDetected.keys());
+          
+          const durationSec = Math.max(1, Math.round((Date.now() - metadata.startTime) / 1000));
+          const finalElapsedMs = durationSec * 1000;
+
+          // Finalize active chapter
+          const lastChapter = this.sermonChapters[this.sermonChapters.length - 1];
+          if (lastChapter) {
+            lastChapter.end_time_ms = finalElapsedMs;
+          }
+          if (this.env.DB) {
+            this.env.DB.prepare("UPDATE sermon_chapters SET end_time_ms = ? WHERE sermon_id = ? AND chapter_index = ?")
+              .bind(finalElapsedMs, sermonId, this.currentChapterIndex).run().catch(console.error);
+          }
+
+          const chapters = [...this.sermonChapters];
+
+          this.isRecordingArchive = false;
+          this.currentSermonId = null;
+
+          this.broadcast({
+            type: "archive_status",
+            isRecording: false,
+            status: "processing",
+            sermonId
+          });
+
+          // Run synthesis in background
+          this.synthesizeSermon(sermonId, metadata, captions, scriptures, chapters);
+          return;
+        }
+
+        if (cmd.type === "get_archive_status") {
+          ws.send(JSON.stringify({
+            type: "archive_status",
+            isRecording: this.isRecordingArchive,
+            sermonId: this.currentSermonId,
+            metadata: this.sermonMetadata,
+            scripturesCount: this.scripturesDetected.size,
+            captionCount: this.sermonCaptions.length,
+            chaptersCount: this.sermonChapters.length,
+            currentChapter: this.currentChapterTitle
+          }));
+          return;
+        }
       } catch (e) {}
       return;
     }
@@ -302,6 +742,105 @@ export class CaptionDurableObject {
           }
         }, PAUSE_DEBOUNCE_MS);
       }
+    }
+  }
+
+  sliceChapter(elapsedMs, title, scriptureAnchor = null) {
+    if (!this.isRecordingArchive || !this.currentSermonId) return;
+
+    const prevIndex = this.currentChapterIndex;
+    const prevChapter = this.sermonChapters[this.sermonChapters.length - 1];
+    if (prevChapter) {
+      prevChapter.end_time_ms = elapsedMs;
+    }
+    if (this.env.DB) {
+      this.env.DB.prepare("UPDATE sermon_chapters SET end_time_ms = ? WHERE sermon_id = ? AND chapter_index = ?")
+        .bind(elapsedMs, this.currentSermonId, prevIndex).run().catch(console.error);
+    }
+
+    this.currentChapterIndex++;
+    this.currentChapterStartTimeMs = elapsedMs;
+    this.currentChapterTitle = title;
+    this.currentChapterAnchor = scriptureAnchor;
+
+    const newChapter = {
+      chapter_index: this.currentChapterIndex,
+      title,
+      start_time_ms: elapsedMs,
+      end_time_ms: null,
+      scripture_anchor: scriptureAnchor
+    };
+    this.sermonChapters.push(newChapter);
+
+    if (this.env.DB) {
+      this.env.DB.prepare("INSERT INTO sermon_chapters (sermon_id, chapter_index, title, start_time_ms, scripture_anchor) VALUES (?, ?, ?, ?, ?)")
+        .bind(this.currentSermonId, this.currentChapterIndex, title, elapsedMs, scriptureAnchor).run().catch(console.error);
+    }
+
+    this.broadcast({
+      type: "chapter_slice",
+      sermonId: this.currentSermonId,
+      chapter: newChapter
+    });
+  }
+
+  async synthesizeSermon(sermonId, metadata, captions, scriptures, chapters = []) {
+    try {
+      const durationSec = Math.max(1, Math.round((Date.now() - metadata.startTime) / 1000));
+      const fullText = captions.map(c => c.text).join(" ");
+      const words = fullText.split(/\s+/).filter(Boolean);
+      const wordCount = words.length;
+      const activeMinutes = Math.max(0.1, durationSec / 60);
+      const wpm = Math.round(wordCount / activeMinutes);
+
+      let summary = "Sermon transcript recorded and archived.";
+      let keyPointsJson = "[]";
+
+      if (wordCount >= 20) {
+        try {
+          const prompt = `You are an assistant for Calvary Baptist Church. Summarize the following sermon in 2-3 sentences, and provide 3 key biblical takeaways as bullet points.\n\nSpeaker: ${metadata.speaker}\nTitle: ${metadata.title}\nScriptures: ${scriptures.join(", ") || "None specified"}\n\nTranscript:\n${fullText.slice(0, 7000)}\n\nFormat your response strictly as valid JSON with keys "summary" (string) and "key_points" (array of strings). Do NOT include code block markdown or any other text.`;
+          
+          const aiRes = await this.env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
+            prompt,
+            max_tokens: 512
+          });
+
+          if (aiRes && aiRes.response) {
+            try {
+              const cleaned = aiRes.response.trim().replace(/^```json\s*/i, '').replace(/\s*```$/i, '').trim();
+              const parsed = JSON.parse(cleaned);
+              if (parsed.summary) summary = parsed.summary;
+              if (Array.isArray(parsed.key_points)) keyPointsJson = JSON.stringify(parsed.key_points);
+            } catch (jsonErr) {
+              summary = aiRes.response.slice(0, 500);
+            }
+          }
+        } catch (aiErr) {
+          console.error("AI Sermon Summary generation error:", aiErr);
+        }
+      }
+
+      await this.env.DB.prepare(`
+        UPDATE sermons
+        SET summary = ?, key_points = ?, duration_seconds = ?, word_count = ?, wpm = ?, status = 'archived', updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `).bind(summary, keyPointsJson, durationSec, wordCount, wpm, sermonId).run();
+
+      this.broadcast({
+        type: "archive_completed",
+        sermonId,
+        title: metadata.title,
+        speaker: metadata.speaker,
+        durationSeconds: durationSec,
+        wordCount,
+        wpm,
+        scriptures,
+        chapters,
+        summary,
+        keyPoints: JSON.parse(keyPointsJson)
+      });
+    } catch (err) {
+      console.error("Error finalizing sermon archive:", err);
     }
   }
 
@@ -346,8 +885,8 @@ export class CaptionDurableObject {
         return;
       }
 
-      // Retain 250ms trailing acoustic overlap (8,000 bytes) for boundary continuity
-      const overlapBytes = Math.min(8000, pcmData.length);
+      // Retain 500ms trailing acoustic overlap (16,000 bytes) for boundary continuity
+      const overlapBytes = Math.min(16000, pcmData.length);
       const overlapChunk = pcmData.slice(pcmData.length - overlapBytes);
       this.audioChunks = [overlapChunk];
 
@@ -396,8 +935,10 @@ export class CaptionDurableObject {
         }
       }
 
-      // Build context string combining D1 Lexicon + trailing transcription overlap
-      const aiPrompt = `Context: ${this.d1Context}. ${this.lastTranscription ? this.lastTranscription.slice(-200) : ""}`;
+      // Build context string using ONLY the D1 Lexicon. 
+      // PER DEFENSE-IN-DEPTH: We intentionally DO NOT append this.lastTranscription. 
+      // Passing previous text creates an autoregressive feedback loop that triggers infinite hallucinations.
+      const aiPrompt = `Context: ${this.d1Context}.`;
 
       try {
         // Primary Edge Inference: Large V3 Turbo with 750ms Latency Circuit Breaker
@@ -410,46 +951,66 @@ export class CaptionDurableObject {
         response = await this.env.AI.run("@cf/openai/whisper", { audio: audioArray, initial_prompt: aiPrompt });
       }
 
-function stripSentenceOverlap(prev, next) {
-  if (!prev || !next) return next;
-  const prevWords = prev.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim().split(/\s+/);
-  const nextWords = next.split(/\s+/);
-  if (prevWords.length === 0 || nextWords.length === 0) return next;
-
-  const maxCheck = Math.min(4, Math.min(prevWords.length, nextWords.length));
-  for (let n = maxCheck; n >= 1; n--) {
-    const prevTail = prevWords.slice(prevWords.length - n).join(' ');
-    const nextHead = nextWords.slice(0, n).map(w => w.toLowerCase().replace(/[^a-z0-9]/g, '')).join(' ');
-    if (prevTail === nextHead) {
-      const stripped = nextWords.slice(n).join(' ').trim();
-      if (stripped.length > 0) {
-        return stripped.charAt(0).toUpperCase() + stripped.slice(1);
-      }
-    }
-  }
-  return next;
-}
-
       if (response && response.text) {
         const rawText = response.text.trim();
         if (!isHallucinationOrProfane(rawText)) {
           let captionText = formatCaption(rawText);
-          captionText = stripSentenceOverlap(this.lastTranscription, captionText);
 
-          const now = Date.now();
-          const isImmediateDuplicate = (
-            captionText.toLowerCase() === (this.lastTranscription || "").toLowerCase() &&
-            (now - this.lastTranscriptionTime) < 3000
-          );
-
-          if (!isImmediateDuplicate && captionText.length > 0) {
+          if (captionText.length > 0) {
             this.lastTranscription = captionText;
-            this.lastTranscriptionTime = now;
+            this.lastTranscriptionTime = Date.now();
             this.broadcast({
               type: "caption",
               text: captionText,
-              timestamp: now
+              timestamp: this.lastTranscriptionTime
             });
+
+            // If Sermon Archive is actively recording, slice transcript and persist to D1
+            if (this.isRecordingArchive && this.currentSermonId) {
+              const elapsedMs = Math.max(0, this.lastTranscriptionTime - this.sermonMetadata.startTime);
+
+              // 1. Record Caption in memory and D1
+              this.sermonCaptions.push({ timestamp_ms: elapsedMs, text: captionText });
+              if (this.env.DB) {
+                this.env.DB.prepare("INSERT INTO sermon_captions (sermon_id, timestamp_ms, text) VALUES (?, ?, ?)")
+                  .bind(this.currentSermonId, elapsedMs, captionText).run().catch(console.error);
+              }
+
+              // 2. Scripture Reference Detection & Chapter Anchor Slicing
+              let match;
+              const detectRegex = new RegExp(DETECT_SCRIPTURE_PATTERN.source, 'gi');
+              while ((match = detectRegex.exec(captionText)) !== null) {
+                const fullRef = match[0];
+                const book = match[1];
+                const chapterNum = parseInt(match[2], 10);
+                const verseNum = parseInt(match[3], 10);
+
+                if (!this.scripturesDetected.has(fullRef)) {
+                  this.scripturesDetected.set(fullRef, elapsedMs);
+                  if (this.env.DB) {
+                    this.env.DB.prepare("INSERT INTO sermon_scriptures (sermon_id, reference, book, chapter, verse, detected_at_ms) VALUES (?, ?, ?, ?, ?, ?)")
+                      .bind(this.currentSermonId, fullRef, book, chapterNum, verseNum, elapsedMs).run().catch(console.error);
+                  }
+                  this.broadcast({
+                    type: "scripture_detected",
+                    sermonId: this.currentSermonId,
+                    reference: fullRef,
+                    timestamp_ms: elapsedMs
+                  });
+
+                  // Scripture Chapter Slicing: Trigger new chapter anchor if at least 2 mins (120,000ms) since last chapter started
+                  if ((elapsedMs - this.currentChapterStartTimeMs) >= 120000) {
+                    this.sliceChapter(elapsedMs, `Scripture: ${fullRef}`, fullRef);
+                  }
+                }
+              }
+
+              // 3. Temporal Chapter Slicing (5-minute intervals = 300,000ms)
+              if ((elapsedMs - this.currentChapterStartTimeMs) >= 300000) {
+                const minutesMark = Math.floor(elapsedMs / 60000);
+                this.sliceChapter(elapsedMs, `Message - Part ${this.currentChapterIndex + 1} (${minutesMark}m mark)`, null);
+              }
+            }
           }
         }
       }
@@ -498,6 +1059,24 @@ export default {
       const stub = env.CAPTION_DO.get(id);
       const res = await stub.fetch(request);
       return sanitizeResponseHeaders(res);
+    }
+
+    // Role-Based UI Slice URL Routing
+    let assetUrl = new URL(request.url);
+    if (url.pathname === "/" || url.pathname === "/booth") {
+      assetUrl.pathname = "/booth.html";
+      const assetRes = await env.ASSETS.fetch(new Request(assetUrl, request));
+      return sanitizeResponseHeaders(assetRes);
+    }
+    if (url.pathname === "/overlay") {
+      assetUrl.pathname = "/overlay.html";
+      const assetRes = await env.ASSETS.fetch(new Request(assetUrl, request));
+      return sanitizeResponseHeaders(assetRes);
+    }
+    if (url.pathname === "/sermons") {
+      assetUrl.pathname = "/sermons.html";
+      const assetRes = await env.ASSETS.fetch(new Request(assetUrl, request));
+      return sanitizeResponseHeaders(assetRes);
     }
 
     const assetRes = await env.ASSETS.fetch(request);

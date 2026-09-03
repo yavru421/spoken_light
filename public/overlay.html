@@ -2,30 +2,62 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Spoken Light Overlay - 3-Line Rolling</title>
+  <title>Spoken Light - OBS Livestream Overlay</title>
   <style>
     :root {
       --font-size-active: 2.25rem;
       --font-size-mid: 1.70rem;
       --font-size-top: 1.35rem;
     }
-    body {
+    * { box-sizing: border-box; }
+    html, body {
       margin: 0;
       padding: 0;
-      background: transparent;
+      background: transparent !important;
       overflow: hidden;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      width: 100vw;
+      height: 100vh;
     }
     .caption-container {
       position: absolute;
       bottom: 48px;
       left: 50%;
       transform: translateX(-50%);
-      width: 90%;
-      max-width: 1350px;
+      width: 92%;
+      max-width: 1400px;
       text-align: center;
       pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
     }
+    /* Scripture Lower-Third Badge */
+    .scripture-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(15, 23, 42, 0.94);
+      color: #fbbf24;
+      border: 1px solid rgba(251, 191, 36, 0.5);
+      border-radius: 24px;
+      padding: 6px 18px;
+      font-size: 1.15rem;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8), 0 0 20px rgba(245, 158, 11, 0.25);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    .scripture-badge.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    /* 3-Line Caption Card */
     .caption-card {
       display: inline-flex;
       flex-direction: column;
@@ -39,7 +71,6 @@
       -webkit-backdrop-filter: blur(24px);
       transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1), transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
       max-width: 100%;
-      box-sizing: border-box;
       min-width: 480px;
     }
     .caption-line {
@@ -76,6 +107,13 @@
 </head>
 <body>
   <div class="caption-container">
+    <!-- POPUP SCRIPTURE ANCHOR BADGE -->
+    <div id="scriptureBadge" class="scripture-badge">
+      <span>📖</span>
+      <span id="scriptureText">John 3:16</span>
+    </div>
+
+    <!-- ROLLING 3-LINE CAPTION CARD -->
     <div id="captionCard" class="caption-card fade-out">
       <div id="lineTop" class="caption-line line-top hidden"></div>
       <div id="lineMid" class="caption-line line-mid hidden"></div>
@@ -92,10 +130,13 @@
     const lineTop = document.getElementById('lineTop');
     const lineMid = document.getElementById('lineMid');
     const lineActive = document.getElementById('lineActive');
+    const scriptureBadge = document.getElementById('scriptureBadge');
+    const scriptureText = document.getElementById('scriptureText');
 
     let fadeTimer = null;
+    let scriptureBadgeTimer = null;
     let ws = null;
-    let sentenceStack = []; // FIFO rolling buffer of last 3 sentences
+    let sentenceStack = [];
 
     function renderStack() {
       if (sentenceStack.length === 0) {
@@ -103,21 +144,16 @@
         return;
       }
 
-      // 1 Sentence in stack: show active line only
       if (sentenceStack.length === 1) {
         lineTop.classList.add('hidden');
         lineMid.classList.add('hidden');
         lineActive.innerText = sentenceStack[0];
-      }
-      // 2 Sentences in stack: show mid + active
-      else if (sentenceStack.length === 2) {
+      } else if (sentenceStack.length === 2) {
         lineTop.classList.add('hidden');
         lineMid.classList.remove('hidden');
         lineMid.innerText = sentenceStack[0];
         lineActive.innerText = sentenceStack[1];
-      }
-      // 3 Sentences in stack: show top (faded) + mid + active
-      else {
+      } else {
         lineTop.classList.remove('hidden');
         lineTop.innerText = sentenceStack[0];
         lineMid.classList.remove('hidden');
@@ -155,17 +191,27 @@
       if (!text || text.trim().length === 0) return;
       const clean = text.trim();
 
-      // Ignore exact duplicate if it was already the active line
       if (sentenceStack.length > 0 && sentenceStack[sentenceStack.length - 1] === clean) {
         return;
       }
 
       sentenceStack.push(clean);
       if (sentenceStack.length > 3) {
-        sentenceStack.shift(); // Keep top 3 rolling sentences
+        sentenceStack.shift();
       }
 
       renderStack();
+    }
+
+    function showScriptureBadge(ref) {
+      if (!ref) return;
+      scriptureText.innerText = ref;
+      scriptureBadge.classList.add('visible');
+
+      if (scriptureBadgeTimer) clearTimeout(scriptureBadgeTimer);
+      scriptureBadgeTimer = setTimeout(() => {
+        scriptureBadge.classList.remove('visible');
+      }, 12000); // Display scripture badge for 12 seconds
     }
 
     function connectWebSocket() {
@@ -182,9 +228,11 @@
             clearCaptions();
           } else if (data.type === 'mode_change' && data.mode === 'worship') {
             clearCaptions();
+          } else if (data.type === 'scripture_detected' && data.reference) {
+            showScriptureBadge(data.reference);
           }
         } catch (e) {
-          console.error('Error handling overlay caption:', e);
+          console.error('Error handling overlay message:', e);
         }
       };
 

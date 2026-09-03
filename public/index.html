@@ -3,23 +3,25 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Spoken Light - Church Live Captions</title>
+  <title>Spoken Light - Church Live Captions & Slicing Architecture</title>
   <style>
     :root {
       --bg: #090d16;
       --card-bg: #111827;
+      --card-border: #1f2937;
       --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --gold: #f59e0b;
+      --teal: #0f766e;
       --text: #f8fafc;
       --muted: #94a3b8;
       --danger: #dc2626;
       --success: #16a34a;
-      --warning: #d97706;
-      --border: #1f2937;
     }
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      padding: 32px 16px;
+      padding: 36px 16px;
       background: var(--bg);
       color: var(--text);
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -30,137 +32,102 @@
     }
     .container {
       width: 100%;
-      max-width: 760px;
+      max-width: 860px;
       display: flex;
       flex-direction: column;
-      gap: 18px;
+      gap: 24px;
     }
     .header-bar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding-bottom: 14px;
-      border-bottom: 1px solid var(--border);
+      text-align: center;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--card-border);
     }
-    .title-group h1 {
-      margin: 0;
-      font-size: 1.35rem;
+    .header-bar h1 {
+      margin: 0 0 8px 0;
+      font-size: 2rem;
       font-weight: 800;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .card {
-      background: var(--card-bg);
-      border-radius: 14px;
-      padding: 24px;
-      border: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-    }
-    .btn-main {
-      width: 100%;
-      padding: 22px;
-      font-size: 1.35rem;
-      font-weight: 800;
-      border: none;
-      border-radius: 10px;
-      cursor: pointer;
-      color: white;
-      background: var(--success);
-      box-shadow: 0 4px 20px rgba(22, 163, 74, 0.4);
-      transition: all 0.15s ease;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 10px;
-      user-select: none;
     }
-    .btn-main:hover { filter: brightness(1.1); }
-    .btn-main.running {
-      background: var(--danger);
-      box-shadow: 0 4px 20px rgba(220, 38, 38, 0.4);
+    .subtitle {
+      font-size: 1rem;
+      color: var(--muted);
     }
-    .btn-worship {
-      padding: 16px;
-      font-size: 1.1rem;
-      font-weight: 700;
-      border: none;
-      border-radius: 10px;
-      cursor: pointer;
-      color: white;
-      background: #4f46e5;
-      transition: all 0.15s ease;
-      display: none;
+    /* Slices Grid */
+    .slice-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 20px;
     }
-    .btn-worship.muted {
-      background: var(--warning);
-      box-shadow: 0 4px 16px rgba(217, 119, 6, 0.4);
-    }
-    .teleprompter-box {
-      background: #050811;
-      border: 2px solid #3b82f6;
-      border-radius: 12px;
-      padding: 28px 24px;
-      min-height: 160px;
+    .slice-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 24px;
       display: flex;
       flex-direction: column;
-      justify-content: center;
-      box-shadow: 0 0 24px rgba(59, 130, 246, 0.15);
+      justify-content: space-between;
+      gap: 16px;
+      text-decoration: none;
+      color: inherit;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
     }
-    .teleprompter-label {
-      font-size: 0.75rem;
+    .slice-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 32px rgba(59, 130, 246, 0.2);
+      border-color: var(--accent);
+    }
+    .slice-icon {
+      font-size: 2.2rem;
+      margin-bottom: 4px;
+    }
+    .slice-title {
+      font-size: 1.3rem;
       font-weight: 800;
-      color: #60a5fa;
+      color: #fff;
+    }
+    .slice-badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 0.72rem;
+      font-weight: 800;
       letter-spacing: 0.05em;
       text-transform: uppercase;
-      margin-bottom: 8px;
+      margin-left: 6px;
     }
-    .vu-meter-bar {
-      height: 8px;
-      background: #1f2937;
-      border-radius: 4px;
-      overflow: hidden;
+    .slice-desc {
+      font-size: 0.9rem;
+      color: var(--muted);
+      line-height: 1.5;
     }
-    .vu-fill {
-      height: 100%;
-      width: 0%;
-      background: #22c55e;
-      transition: width 0.05s ease-out;
-    }
-    select {
-      background: #0a0f1d;
-      color: #fff;
-      border: 1px solid var(--border);
-      padding: 10px 14px;
-      border-radius: 8px;
-      font-size: 0.95rem;
-      width: 100%;
-    }
-    .btn-copy {
-      background: #1f2937;
-      color: #e2e8f0;
-      border: 1px solid #374151;
-      padding: 8px 14px;
-      border-radius: 6px;
-      font-size: 0.85rem;
-      font-weight: 600;
-      cursor: pointer;
-    }
-    .btn-copy:hover { background: #374151; }
-    .toast {
-      position: fixed;
-      bottom: 24px;
-      background: #16a34a;
-      color: white;
-      padding: 10px 18px;
+    .btn-enter {
+      padding: 12px 16px;
       border-radius: 8px;
       font-weight: 700;
-      font-size: 0.9rem;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.5);
-      z-index: 999;
-      display: none;
+      font-size: 0.95rem;
+      text-align: center;
+      background: #1e293b;
+      color: #fff;
+      border: 1px solid #334155;
+      transition: all 0.15s ease;
+    }
+    .slice-card:hover .btn-enter {
+      background: var(--accent);
+      border-color: var(--accent-hover);
+    }
+    /* Info Card */
+    .info-card {
+      background: #0d1322;
+      border: 1px solid #1e293b;
+      border-radius: 12px;
+      padding: 20px;
+      font-size: 0.88rem;
+      line-height: 1.6;
+      color: var(--muted);
     }
   </style>
 </head>
@@ -168,360 +135,59 @@
 
   <div class="container">
     <div class="header-bar">
-      <div class="title-group">
-        <h1>🎙️ Spoken Light <span style="font-size:0.75rem; background:#0284c7; padding:2px 8px; border-radius:6px; font-weight:800;">v3.1</span></h1>
-        <div style="font-size:0.8rem; color:var(--muted); margin-top:2px;">Calvary Baptist Church • Live Broadcast Captions</div>
-      </div>
-      <div style="display:flex; gap:8px;">
-        <button id="saveTranscriptBtn" class="btn-copy" style="background:#0f766e; border-color:#14b8a6; color:#fff;">💾 Save Transcript</button>
-        <button id="copyObsBtn" class="btn-copy">📋 Copy OBS Overlay Link</button>
-      </div>
+      <h1>🎙️ Spoken Light</h1>
+      <div class="subtitle">Calvary Baptist Church • Real-Time AI Live Captioning & Sermon Slicing Platform</div>
     </div>
 
-    <!-- MAIN ALL-IN-ONE CARD -->
-    <div class="card">
-      <div style="display:flex; gap:12px; flex-wrap:wrap;">
-        <button id="mainToggleBtn" class="btn-main" style="flex:1; min-width:260px;">
-          ▶ START LIVE CAPTIONS
-        </button>
-        <button id="modeToggleBtn" class="btn-worship" style="flex:1; min-width:260px;">
-          🎙️ SERMON MODE (ACTIVE)
-        </button>
-      </div>
-
-      <div id="modeHint" style="font-size:0.82rem; color:var(--muted); text-align:center; display:none;">
-        <span style="color:#f8fafc; font-weight:700;">Sound Booth Shortcut:</span> Press <kbd style="background:#1f2937; padding:2px 6px; border-radius:4px; border:1px solid #374151;">Spacebar</kbd> to toggle between <b>Sermon</b> and <b>Worship Songs Mute</b>.
-      </div>
-
-      <!-- LIVE 3-LINE TELEPROMPTER -->
-      <div class="teleprompter-box">
-        <div class="teleprompter-label">Live Broadcast Subtitle (Streaming to OBS)</div>
-        <div id="teleprompterStack" style="display:flex; flex-direction:column; gap:8px;">
-          <div id="adminLineTop" style="color:rgba(203,213,225,0.35); font-size:1.15rem; font-weight:500; line-height:1.35; display:none;"></div>
-          <div id="adminLineMid" style="color:rgba(226,232,240,0.70); font-size:1.45rem; font-weight:600; line-height:1.35; display:none;"></div>
-          <div id="adminLineActive" style="color:#ffffff; font-size:1.95rem; font-weight:800; line-height:1.35;">
-            <span style="color:#64748b; font-weight:500; font-size:1.15rem; font-style:italic;">Click START above and speak into the soundboard mic. Live captions will appear here and in OBS.</span>
+    <!-- ROLE-BASED UI SLICES -->
+    <div class="slice-grid">
+      <!-- SLICE 1: BOOTH -->
+      <a href="/booth" class="slice-card">
+        <div>
+          <div class="slice-icon">🎛️</div>
+          <div class="slice-title">Sound Booth <span class="slice-badge" style="background:#1e3a8a; color:#93c5fd;">/booth</span></div>
+          <div class="slice-desc" style="margin-top:8px;">
+            Clean, zero-distraction soundboard console for high school volunteers with simple login (<code>booth</code> / <code>calvary</code>), mic VU meters, and the <b>Arm Sermon Archive</b> toggle.
           </div>
         </div>
-      </div>
+        <div class="btn-enter">Open Sound Booth Console &rarr;</div>
+      </a>
 
-      <!-- SOUND DEVICE & VU METER -->
-      <div style="display:flex; flex-direction:column; gap:8px;">
-        <div style="display:flex; justify-content:space-between; font-size:0.8rem; color:var(--muted);">
-          <span>Audio Input Source:</span>
-          <span id="micStatus">Mic: Inactive</span>
+      <!-- SLICE 2: OVERLAY -->
+      <a href="/overlay" class="slice-card" target="_blank">
+        <div>
+          <div class="slice-icon">📺</div>
+          <div class="slice-title">OBS Livestream <span class="slice-badge" style="background:#4c1d95; color:#c4b5fd;">/overlay</span></div>
+          <div class="slice-desc" style="margin-top:8px;">
+            100% transparent browser source for OBS Studio. Hardware-accelerated 3-line rolling teleprompter with automatic fade-out and real-time scripture reading banners.
+          </div>
         </div>
-        <select id="audioSelect">
-          <option value="">Default Sound Board / System Mic</option>
-        </select>
-        <div class="vu-meter-bar">
-          <div id="vuFill" class="vu-fill"></div>
+        <div class="btn-enter">Launch OBS Lower-Third &rarr;</div>
+      </a>
+
+      <!-- SLICE 3: SERMONS -->
+      <a href="/sermons" class="slice-card">
+        <div>
+          <div class="slice-icon">📖</div>
+          <div class="slice-title">Pastor Portal <span class="slice-badge" style="background:#064e3b; color:#6ee7b7;">/sermons</span></div>
+          <div class="slice-desc" style="margin-top:8px;">
+            Public & pastor portal to browse archived messages, view Llama 3.1 AI executive summaries, 3 key biblical takeaways, detected scriptures, and structured chapter timelines.
+          </div>
         </div>
+        <div class="btn-enter">Explore Sermon Archives &rarr;</div>
+      </a>
+    </div>
+
+    <!-- ARCHITECTURE SUMMARY -->
+    <div class="info-card">
+      <div style="font-weight:800; color:#f8fafc; margin-bottom:6px;">⚡ Spoken Light Slicing Architecture</div>
+      <div>
+        • <b>Temporal & Scripture Slicing</b>: Automatically segments live sermons into structured chapters anchored by detected Bible verses (<code>SCRIPTURE_REF_PATTERN</code>) and 5-minute intervals.<br>
+        • <b>Cloudflare D1 Persistence</b>: Fully relational storage across <code>sermons</code>, <code>sermon_captions</code>, <code>sermon_scriptures</code>, and <code>sermon_chapters</code>.<br>
+        • <b>Llama 3.1 8B Edge Synthesis</b>: Generates concise pastoral executive summaries and structured takeaways at the conclusion of every service.
       </div>
     </div>
   </div>
 
-  <div id="toast" class="toast"></div>
-
-  <script>
-    let isStreaming = false;
-    let currentMode = "sermon";
-    let ws = null;
-    let audioContext = null;
-    let audioStream = null;
-    let scriptProcessor = null;
-    let analyser = null;
-    let animFrame = null;
-    let adminSentenceStack = [];
-    let sessionTranscript = [];
-
-    const mainToggleBtn = document.getElementById('mainToggleBtn');
-    const modeToggleBtn = document.getElementById('modeToggleBtn');
-    const modeHint = document.getElementById('modeHint');
-    const adminLineTop = document.getElementById('adminLineTop');
-    const adminLineMid = document.getElementById('adminLineMid');
-    const adminLineActive = document.getElementById('adminLineActive');
-    const audioSelect = document.getElementById('audioSelect');
-    const vuFill = document.getElementById('vuFill');
-    const micStatus = document.getElementById('micStatus');
-    const copyObsBtn = document.getElementById('copyObsBtn');
-    const toast = document.getElementById('toast');
-
-    function showToast(msg) {
-      toast.innerText = msg;
-      toast.style.display = 'block';
-      setTimeout(() => { toast.style.display = 'none'; }, 2500);
-    }
-
-    function renderAdminStack() {
-      if (adminSentenceStack.length === 0) {
-        adminLineTop.style.display = 'none';
-        adminLineMid.style.display = 'none';
-        adminLineActive.innerHTML = '<span style="color:#64748b; font-weight:500; font-size:1.15rem; font-style:italic;">Awaiting live speech...</span>';
-        return;
-      }
-
-      if (adminSentenceStack.length === 1) {
-        adminLineTop.style.display = 'none';
-        adminLineMid.style.display = 'none';
-        adminLineActive.innerText = adminSentenceStack[0];
-      } else if (adminSentenceStack.length === 2) {
-        adminLineTop.style.display = 'none';
-        adminLineMid.style.display = 'block';
-        adminLineMid.innerText = adminSentenceStack[0];
-        adminLineActive.innerText = adminSentenceStack[1];
-      } else {
-        adminLineTop.style.display = 'block';
-        adminLineTop.innerText = adminSentenceStack[0];
-        adminLineMid.style.display = 'block';
-        adminLineMid.innerText = adminSentenceStack[1];
-        adminLineActive.innerText = adminSentenceStack[2];
-      }
-    }
-
-    function pushAdminCaption(text) {
-      if (!text || text.trim().length === 0) return;
-      const clean = text.trim();
-      if (adminSentenceStack.length > 0 && adminSentenceStack[adminSentenceStack.length - 1] === clean) return;
-
-      adminSentenceStack.push(clean);
-      if (adminSentenceStack.length > 3) adminSentenceStack.shift();
-      renderAdminStack();
-
-      // Record clean chronological broadcast transcript
-      const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-      sessionTranscript.push(`[${timeStr}] ${clean}`);
-    }
-
-    function downloadTranscript() {
-      if (sessionTranscript.length === 0) {
-        showToast('ℹ️ No live transcript to save yet');
-        return;
-      }
-
-      const now = new Date();
-      const datePart = now.toISOString().slice(0, 10);
-      const timePart = now.toTimeString().slice(0, 8).replace(/:/g, '-');
-      const filename = `SpokenLight_Transcript_${datePart}_${timePart}.txt`;
-
-      const header = `====================================================\nSPOKEN LIGHT BROADCAST TRANSCRIPT\nDate: ${now.toLocaleDateString()} ${now.toLocaleTimeString()}\nChurch: Calvary Baptist Church\nTotal Entries: ${sessionTranscript.length}\n====================================================\n\n`;
-      const content = header + sessionTranscript.join('\n\n') + '\n';
-
-      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      showToast(`✓ Saved: ${filename}`);
-    }
-
-    const saveTranscriptBtn = document.getElementById('saveTranscriptBtn');
-    if (saveTranscriptBtn) {
-      saveTranscriptBtn.addEventListener('click', downloadTranscript);
-    }
-
-    copyObsBtn.addEventListener('click', () => {
-      const url = `${location.protocol}//${location.host}/overlay.html`;
-      navigator.clipboard.writeText(url).then(() => {
-        showToast('✓ OBS Link Copied to Clipboard!');
-      });
-    });
-
-    function setMode(mode) {
-      currentMode = mode;
-      if (currentMode === "worship") {
-        modeToggleBtn.innerHTML = '🎵 WORSHIP (MUTED / PAUSED)';
-        modeToggleBtn.className = 'btn-worship muted';
-        adminSentenceStack = [];
-        renderAdminStack();
-        showToast('🎵 Worship Mode: Captions Muted');
-      } else {
-        modeToggleBtn.innerHTML = '🎙️ SERMON (ACTIVE)';
-        modeToggleBtn.className = 'btn-worship';
-        showToast('🎙️ Sermon Mode: Captions Active');
-      }
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: 'set_mode', mode: currentMode }));
-      }
-    }
-
-    modeToggleBtn.addEventListener('click', () => {
-      setMode(currentMode === "sermon" ? "worship" : "sermon");
-    });
-
-    window.addEventListener('keydown', (e) => {
-      if (e.target && ['input', 'select', 'textarea'].includes(e.target.tagName.toLowerCase())) return;
-      if (e.code === 'Space' || e.key === ' ' || e.key.toLowerCase() === 'm') {
-        e.preventDefault();
-        if (isStreaming) {
-          setMode(currentMode === "sermon" ? "worship" : "sermon");
-        }
-      }
-    });
-
-    function initWebSocket() {
-      if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
-      const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-      ws = new WebSocket(`${protocol}//${location.host}/api/ws`);
-
-      ws.onmessage = (e) => {
-        try {
-          const data = JSON.parse(e.data);
-          if (data.type === 'caption' && data.text) {
-            pushAdminCaption(data.text);
-          } else if (data.type === 'mode_change' && data.mode) {
-            if (data.mode !== currentMode) setMode(data.mode);
-          }
-        } catch (err) {}
-      };
-
-      ws.onclose = () => {
-        ws = null;
-        setTimeout(initWebSocket, 2000);
-      };
-    }
-
-    function updateVu() {
-      if (!isStreaming || !analyser) return;
-      const data = new Uint8Array(analyser.frequencyBinCount);
-      analyser.getByteFrequencyData(data);
-      let sum = 0;
-      for (let i = 0; i < data.length; i++) sum += data[i];
-      const pct = Math.min(100, Math.round(((sum / data.length) / 128) * 100));
-      vuFill.style.width = `${pct}%`;
-      micStatus.innerText = currentMode === "worship" ? "🎵 Muted for Worship" : `🎙️ Live (${pct}%)`;
-      animFrame = requestAnimationFrame(updateVu);
-    }
-
-    async function startStreaming() {
-      try {
-        const deviceId = audioSelect.value;
-        const constraints = deviceId ? { deviceId: { exact: deviceId }, channelCount: 1 } : { channelCount: 1 };
-        audioStream = await navigator.mediaDevices.getUserMedia({ audio: constraints });
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        if (audioContext.state === 'suspended') await audioContext.resume();
-
-        const source = audioContext.createMediaStreamSource(audioStream);
-
-        // 1. Studio 80Hz High-Pass Sub-Bass Rumble Filter
-        const highPass = audioContext.createBiquadFilter();
-        highPass.type = 'highpass';
-        highPass.frequency.value = 80;
-        highPass.Q.value = 0.707;
-
-        // 2. Studio Dynamics Compressor (Levels quiet speech & tames spikes)
-        const compressor = audioContext.createDynamicsCompressor();
-        compressor.threshold.value = -24;
-        compressor.knee.value = 12;
-        compressor.ratio.value = 4;
-        compressor.attack.value = 0.003;
-        compressor.release.value = 0.25;
-
-        analyser = audioContext.createAnalyser();
-        analyser.fftSize = 256;
-
-        source.connect(highPass);
-        highPass.connect(compressor);
-        compressor.connect(analyser);
-
-        window._proc = audioContext.createScriptProcessor(4096, 1, 1);
-        scriptProcessor = window._proc;
-        let pcmAcc = [];
-        const nativeRate = audioContext.sampleRate;
-
-        scriptProcessor.onaudioprocess = (e) => {
-          if (!isStreaming || currentMode === "worship") {
-            pcmAcc = [];
-            return;
-          }
-          const input = e.inputBuffer.getChannelData(0);
-          const ratio = nativeRate / 16000;
-          const targetLen = Math.floor(input.length / ratio);
-
-          for (let i = 0; i < targetLen; i++) {
-            const srcPos = i * ratio;
-            const srcIndex = Math.floor(srcPos);
-            const nextIndex = Math.min(srcIndex + 1, input.length - 1);
-            const frac = srcPos - srcIndex;
-            const sample = input[srcIndex] * (1 - frac) + input[nextIndex] * frac;
-            pcmAcc.push(sample);
-          }
-
-          if (pcmAcc.length >= 4000) {
-            const samples = pcmAcc.slice(0, 4000);
-            pcmAcc = pcmAcc.slice(4000);
-            const int16 = new Int16Array(samples.length);
-            for (let i = 0; i < samples.length; i++) {
-              const s = Math.max(-1, Math.min(1, samples[i]));
-              int16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
-            }
-            if (ws && ws.readyState === WebSocket.OPEN) {
-              ws.send(int16.buffer);
-            }
-          }
-        };
-
-        compressor.connect(scriptProcessor);
-        scriptProcessor.connect(audioContext.destination);
-
-        isStreaming = true;
-        updateVu();
-
-        mainToggleBtn.innerText = '⏹ STOP LIVE CAPTIONS';
-        mainToggleBtn.className = 'btn-main running';
-        modeToggleBtn.style.display = 'block';
-        modeHint.style.display = 'block';
-        showToast('✓ Live Captions Started!');
-      } catch (err) {
-        alert('Could not start microphone: ' + err.message);
-      }
-    }
-
-    function stopStreaming() {
-      isStreaming = false;
-      if (animFrame) cancelAnimationFrame(animFrame);
-      if (window._proc) { window._proc.disconnect(); window._proc = null; }
-      if (scriptProcessor) { scriptProcessor.disconnect(); scriptProcessor = null; }
-      if (analyser) { analyser.disconnect(); analyser = null; }
-      if (audioContext) { audioContext.close(); audioContext = null; }
-      if (audioStream) { audioStream.getTracks().forEach(t => t.stop()); audioStream = null; }
-
-      mainToggleBtn.innerText = '▶ START LIVE CAPTIONS';
-      mainToggleBtn.className = 'btn-main';
-      modeToggleBtn.style.display = 'none';
-      modeHint.style.display = 'none';
-      vuFill.style.width = '0%';
-      micStatus.innerText = 'Mic: Inactive';
-      showToast('Live Captions Stopped');
-    }
-
-    mainToggleBtn.addEventListener('click', () => {
-      if (!isStreaming) startStreaming();
-      else stopStreaming();
-    });
-
-    async function populateDevices() {
-      try {
-        await navigator.mediaDevices.getUserMedia({ audio: true }).then(s => s.getTracks().forEach(t => t.stop())).catch(() => {});
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        const inputs = devices.filter(d => d.kind === 'audioinput');
-        audioSelect.innerHTML = '';
-        inputs.forEach(d => {
-          const opt = document.createElement('option');
-          opt.value = d.deviceId;
-          opt.text = d.label || `Sound Input (${d.deviceId.slice(0, 6)})`;
-          audioSelect.appendChild(opt);
-        });
-      } catch (err) {}
-    }
-
-    initWebSocket();
-    populateDevices();
-  </script>
 </body>
 </html>
