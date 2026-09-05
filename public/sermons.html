@@ -372,6 +372,7 @@
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
           <div class="section-title" style="margin-bottom:0;">📝 Full Sermon Transcript</div>
           <div style="display:flex; gap:8px;">
+            <button id="reprocessBtn" class="btn-action" style="padding:6px 12px; font-size:0.8rem; background:#2563eb; border-color:#3b82f6; color:#fff;">⚡ Reprocess with AI</button>
             <button id="copyTranscriptBtn" class="btn-action" style="padding:6px 12px; font-size:0.8rem;">📋 Copy Text</button>
             <button id="downloadNotesBtn" class="btn-action" style="padding:6px 12px; font-size:0.8rem; background:#0f766e; border-color:#14b8a6; color:#fff;">💾 Download Notes</button>
           </div>
@@ -475,13 +476,21 @@
     }
 
     function renderSermons(list) {
-      if (!list || list.length === 0) {
+      // Filter out ghost recordings that have 0 words and are in 'recording' status
+      const cleanList = (list || []).filter(s => {
+        if (s.status === 'recording' && (!s.word_count || s.word_count === 0) && (!s.duration_seconds || s.duration_seconds < 60)) {
+          return false;
+        }
+        return true;
+      });
+
+      if (!cleanList || cleanList.length === 0) {
         sermonGrid.innerHTML = `<div style="color:var(--muted); font-style:italic; padding:20px;">No archived sermons found in D1 database. Arm the sermon archive in the Sound Booth console to record one.</div>`;
         return;
       }
 
       sermonGrid.innerHTML = '';
-      list.forEach(s => {
+      cleanList.forEach(s => {
         const card = document.createElement('div');
         card.className = 'sermon-card';
         card.onclick = () => openSermonModal(s.id);
@@ -659,6 +668,33 @@
         showToast("Copied full sermon transcript!");
       });
     });
+
+    const reprocessBtn = document.getElementById('reprocessBtn');
+    if (reprocessBtn) {
+      reprocessBtn.addEventListener('click', async () => {
+        if (!activeSermonDetail || !activeSermonDetail.sermon) return;
+        const sermonId = activeSermonDetail.sermon.id;
+        reprocessBtn.disabled = true;
+        reprocessBtn.innerText = "⏳ Synthesizing...";
+        showToast("Running Workers AI analysis & scripture extraction...");
+        try {
+          const res = await fetch(`/api/sermons/${sermonId}/reprocess`, { method: "POST" });
+          const data = await res.json();
+          if (data.ok) {
+            showToast("✅ AI synthesis complete! Reloading notes...");
+            await openSermonModal(sermonId);
+            await loadSermons();
+          } else {
+            showToast("❌ Synthesis failed: " + (data.error || "Unknown error"));
+          }
+        } catch (e) {
+          showToast("❌ Network error: " + e.message);
+        } finally {
+          reprocessBtn.disabled = false;
+          reprocessBtn.innerText = "⚡ Reprocess with AI";
+        }
+      });
+    }
 
     downloadNotesBtn.addEventListener('click', () => {
       if (!activeSermonDetail) return;

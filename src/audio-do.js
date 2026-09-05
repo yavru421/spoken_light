@@ -267,12 +267,50 @@ function formatCaption(text) {
   // Convert spoken scripture variations (e.g. "John chapter 3 verse 16" or "Romans 8 28") -> "John 3:16"
   clean = clean.replace(SPOKEN_SCRIPTURE_PATTERN, "$1 $2:$3");
 
-  // Convert 3-digit unspaced spoken scriptures (e.g. "James 119" -> "James 1:19", "John 316" -> "John 3:16")
-  clean = clean.replace(/\b(Genesis|Exodus|Leviticus|Numbers|Deuteronomy|Joshua|Judges|Ruth|1\s+Samuel|2\s+Samuel|1\s+Kings|2\s+Kings|1\s+Chronicles|2\s+Chronicles|Ezra|Nehemiah|Esther|Job|Psalms|Psalm|Proverbs|Ecclesiastes|Song\s+of\s+Solomon|Isaiah|Jeremiah|Lamentations|Ezekiel|Daniel|Hosea|Joel|Amos|Obadiah|Jonah|Micah|Nahum|Habakkuk|Zephaniah|Haggai|Zechariah|Malachi|Matthew|Mark|Luke|John|Acts|Romans|1\s+Corinthians|2\s+Corinthians|Galatians|Ephesians|Philippians|Colossians|1\s+Thessalonians|2\s+Thessalonians|1\s+Timothy|2\s+Timothy|Titus|Philemon|Hebrews|James|1\s+Peter|2\s+Peter|1\s+John|2\s+John|3\s+John|Jude|Revelation)\s+(\d)(\d{2})\b/gi, "$1 $2:$3");
+  // Convert 3-digit and 4-digit unspaced spoken scriptures (e.g. "James 119" -> "James 1:19", "Proverbs 1821" -> "Proverbs 18:21", "Matthew 1806" -> "Matthew 18:6")
+  clean = clean.replace(/\b(Genesis|Exodus|Leviticus|Numbers|Deuteronomy|Joshua|Judges|Ruth|1\s+Samuel|2\s+Samuel|1\s+Kings|2\s+Kings|1\s+Chronicles|2\s+Chronicles|Ezra|Nehemiah|Esther|Job|Psalms|Psalm|Proverbs|Ecclesiastes|Song\s+of\s+Solomon|Isaiah|Jeremiah|Lamentations|Ezekiel|Daniel|Hosea|Joel|Amos|Obadiah|Jonah|Micah|Nahum|Habakkuk|Zephaniah|Haggai|Zechariah|Malachi|Matthew|Mark|Luke|John|Acts|Romans|1\s+Corinthians|2\s+Corinthians|Galatians|Ephesians|Philippians|Colossians|1\s+Thessalonians|2\s+Thessalonians|1\s+Timothy|2\s+Timothy|Titus|Philemon|Hebrews|James|1\s+Peter|2\s+Peter|1\s+John|2\s+John|3\s+John|Jude|Revelation)\s+(\d{1,2})(\d{2})\b/gi, (match, book, ch, vs) => {
+    return `${book} ${ch}:${parseInt(vs, 10)}`;
+  });
 
   clean = clean.charAt(0).toUpperCase() + clean.slice(1);
   if (clean.endsWith(',')) clean = clean.slice(0, -1);
   return clean;
+}
+
+async function runWorkersAi(env, prompt, maxTokens = 512) {
+  if (!env || !env.AI) return null;
+  const models = [
+    "@cf/meta/llama-3.1-8b-instruct-fp8",
+    "@cf/meta/llama-3.2-3b-instruct"
+  ];
+  for (const model of models) {
+    try {
+      const res = await env.AI.run(model, { prompt, max_tokens: maxTokens });
+      if (res && res.response) return res.response;
+    } catch (err) {
+      console.warn(`Workers AI inference failed with ${model}:`, err.message || err);
+    }
+  }
+  return null;
+}
+
+function extractScripturesFromText(text) {
+  if (!text) return [];
+  const found = new Set();
+  const bookRegex = /\b(Genesis|Exodus|Leviticus|Numbers|Deuteronomy|Joshua|Judges|Ruth|1\s+Samuel|2\s+Samuel|1\s+Kings|2\s+Kings|1\s+Chronicles|2\s+Chronicles|Ezra|Nehemiah|Esther|Job|Psalms|Psalm|Proverbs|Ecclesiastes|Song\s+of\s+Solomon|Isaiah|Jeremiah|Lamentations|Ezekiel|Daniel|Hosea|Joel|Amos|Obadiah|Jonah|Micah|Nahum|Habakkuk|Zephaniah|Haggai|Zechariah|Malachi|Matthew|Mark|Luke|John|Acts|Romans|1\s+Corinthians|2\s+Corinthians|Galatians|Ephesians|Philippians|Colossians|1\s+Thessalonians|2\s+Thessalonians|1\s+Timothy|2\s+Timothy|Titus|Philemon|Hebrews|James|1\s+Peter|2\s+Peter|1\s+John|2\s+John|3\s+John|Jude|Revelation)\s*(?:chapter\s*)?(\d{1,3})(?::(\d{1,3}(?:-\d{1,3})?)|(?:\s*,\s*|\s+)verses?\s+(\d{1,3}(?:-\d{1,3})?)|(\d{2}))?\b/gi;
+  
+  let match;
+  while ((match = bookRegex.exec(text)) !== null) {
+    const rawBook = match[1].trim();
+    const ch = match[2];
+    const vs = match[3] || match[4] || (match[5] ? parseInt(match[5], 10) : null);
+    if (vs) {
+      found.add(`${rawBook} ${ch}:${vs}`);
+    } else {
+      found.add(`${rawBook} ${ch}`);
+    }
+  }
+  return Array.from(found);
 }
 
 const MIN_CHUNK_BYTES = 160000; // ~5.0s of continuous speech for maximum Whisper acoustic context and natural sentence structure
@@ -731,10 +769,10 @@ export class CaptionDurableObject {
         `;
         let stmt;
         if (filterTenant && filterTenant !== "all") {
-          query += " WHERE s.tenant_id = ? ORDER BY s.created_at DESC LIMIT 50";
+          query += " WHERE s.tenant_id = ? AND (s.status != 'recording' OR s.word_count > 0 OR s.duration_seconds > 60) ORDER BY s.created_at DESC LIMIT 50";
           stmt = this.env.DB.prepare(query).bind(filterTenant);
         } else {
-          query += " ORDER BY s.created_at DESC LIMIT 50";
+          query += " WHERE (s.status != 'recording' OR s.word_count > 0 OR s.duration_seconds > 60) ORDER BY s.created_at DESC LIMIT 50";
           stmt = this.env.DB.prepare(query);
         }
 
@@ -744,6 +782,113 @@ export class CaptionDurableObject {
         });
       } catch (e) {
         return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } });
+      }
+    }
+
+    if (url.pathname.startsWith("/api/sermons/") && url.pathname.endsWith("/reprocess") && request.method === "POST") {
+      const parts = url.pathname.split("/");
+      const sermonId = parts[3];
+      if (!sermonId) return new Response("Not found", { status: 404 });
+
+      if (!this.tablesEnsured) {
+        await ensureTables(this.env.DB);
+        this.tablesEnsured = true;
+      }
+
+      try {
+        const sermon = await this.env.DB.prepare("SELECT * FROM sermons WHERE id = ?").bind(sermonId).first();
+        if (!sermon) return new Response(JSON.stringify({ error: "Sermon not found" }), { status: 404 });
+
+        const captionsRows = await this.env.DB.prepare("SELECT timestamp_ms, text FROM sermon_captions WHERE sermon_id = ? ORDER BY timestamp_ms ASC").bind(sermonId).all();
+        const captions = (captionsRows && captionsRows.results) || [];
+        const captionsText = captions.map(c => c.text).join(" ");
+        const words = captionsText.split(/\s+/).filter(Boolean);
+        const wordCount = words.length;
+        const durationSec = sermon.duration_seconds || Math.round((captions[captions.length - 1]?.timestamp_ms || 60000) / 1000);
+        const activeMinutes = Math.max(0.1, durationSec / 60);
+        const wpm = Math.round(wordCount / activeMinutes);
+
+        let summary = sermon.summary && sermon.summary !== "Sermon transcript recorded and archived." ? sermon.summary : "Sermon transcript recorded and archived.";
+        let keyPointsJson = sermon.key_points || "[]";
+        const scriptures = [];
+
+        if (wordCount >= 20 && this.env.AI) {
+          const prompt = `You are an assistant for ${sermon.tenant_id === 'calvary' ? 'Calvary Baptist Church' : 'Christian Church Ministry'}. Summarize the following sermon in 2-3 sentences, provide 3 key biblical takeaways as bullet points, and extract all biblical scriptures or passages referenced or read (e.g. "James 3:1-12", "James 1:27", "1 Kings 20:11", "Matthew 18:6").\n\nSpeaker: ${sermon.speaker}\nTitle: ${sermon.title}\n\nTranscript:\n${captionsText.slice(0, 7000)}\n\nFormat your response strictly as valid JSON with keys "summary" (string), "key_points" (array of strings), and "scriptures" (array of strings, e.g. ["James 3:1-12", "James 1:27"]). Do NOT include code block markdown or any other text.`;
+          const aiResponse = await runWorkersAi(this.env, prompt, 512);
+          if (aiResponse) {
+            try {
+              const cleaned = aiResponse.trim().replace(/^```json\s*/i, '').replace(/\s*```$/i, '').trim();
+              const parsed = JSON.parse(cleaned);
+              if (parsed.summary) summary = parsed.summary;
+              if (Array.isArray(parsed.key_points)) keyPointsJson = JSON.stringify(parsed.key_points);
+              if (Array.isArray(parsed.scriptures)) {
+                parsed.scriptures.forEach(s => { if (s && typeof s === 'string') scriptures.push(s.trim()); });
+              }
+            } catch {
+              summary = aiResponse.slice(0, 500);
+            }
+          }
+        }
+
+        // Merge deterministic regex scriptures
+        const regexScriptures = extractScripturesFromText(captionsText);
+        for (const ref of regexScriptures) {
+          if (!scriptures.includes(ref)) scriptures.push(ref);
+        }
+
+        // Delete previous scriptures and re-insert
+        await this.env.DB.prepare("DELETE FROM sermon_scriptures WHERE sermon_id = ?").bind(sermonId).run();
+        for (const ref of scriptures) {
+          if (!ref || typeof ref !== 'string') continue;
+          const cleanRef = ref.trim();
+          if (!cleanRef) continue;
+          const m = cleanRef.match(/^([1-3]?\s*[A-Za-z]+(?:\s+[A-Za-z]+)?)\s+(\d+)(?::(\d+))?/);
+          const book = m ? m[1].trim() : cleanRef;
+          const chapterNum = m && m[2] ? parseInt(m[2], 10) : null;
+          const verseNum = m && m[3] ? parseInt(m[3], 10) : null;
+          await this.env.DB.prepare(`
+            INSERT INTO sermon_scriptures (tenant_id, sermon_id, reference, book, chapter, verse, detected_at_ms)
+            VALUES (?, ?, ?, ?, ?, ?, 0)
+          `).bind(sermon.tenant_id, sermonId, cleanRef, book, chapterNum, verseNum).run().catch(console.error);
+        }
+
+        // Chapter synthesis
+        const chRes = await this.env.DB.prepare("SELECT chapter_index, title, start_time_ms, end_time_ms, scripture_anchor, summary FROM sermon_chapters WHERE sermon_id = ? ORDER BY chapter_index ASC").bind(sermonId).all();
+        const chapterList = (chRes && chRes.results) || [];
+        for (const ch of chapterList) {
+          const startMs = ch.start_time_ms || 0;
+          const endMs = (ch.end_time_ms !== null && ch.end_time_ms !== undefined) ? ch.end_time_ms : (durationSec * 1000 || Infinity);
+          const chCaptions = captions.filter(c => c.timestamp_ms >= startMs && c.timestamp_ms <= endMs);
+          const chText = chCaptions.map(c => c.text).join(" ");
+          const chWords = chText.split(/\s+/).filter(Boolean);
+          if (chWords.length >= 15 && this.env.AI) {
+            try {
+              const chPrompt = `You are a pastoral study assistant for ${sermon.tenant_id === 'calvary' ? 'Calvary Baptist Church' : 'Christian Church Ministry'}.\nWrite a concise 1-sentence biblical/pastoral anchor summary for this sermon chapter segment.\n\nChapter Title: ${ch.title}\n${ch.scripture_anchor ? `Scripture Anchor: ${ch.scripture_anchor}\n` : ''}Transcript:\n${chText.slice(0, 3000)}\n\nRespond with ONLY the 1-sentence summary, no quotes, no markdown, no filler.`;
+              const chAiRes = await runWorkersAi(this.env, chPrompt, 120);
+              if (chAiRes) {
+                const chSummary = chAiRes.trim().replace(/^["']|["']$/g, '');
+                await this.env.DB.prepare("UPDATE sermon_chapters SET summary = ? WHERE sermon_id = ? AND chapter_index = ?")
+                  .bind(chSummary, sermonId, ch.chapter_index).run();
+              }
+            } catch (err) {}
+          }
+        }
+
+        // Update sermon in D1
+        await this.env.DB.prepare(`
+          UPDATE sermons
+          SET summary = ?, key_points = ?, duration_seconds = ?, word_count = ?, wpm = ?, status = 'archived', updated_at = CURRENT_TIMESTAMP
+          WHERE id = ?
+        `).bind(summary, keyPointsJson, durationSec, wordCount, wpm, sermonId).run();
+
+        return new Response(JSON.stringify({ ok: true, sermonId, summary, keyPoints: JSON.parse(keyPointsJson), scriptures, wordCount, wpm }), {
+          headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
+        });
+      } catch (err) {
+        return new Response(JSON.stringify({ ok: false, error: err.message }), {
+          status: 500,
+          headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
+        });
       }
     }
 
@@ -1248,25 +1393,46 @@ export class CaptionDurableObject {
 
       if (wordCount >= 20) {
         try {
-          const prompt = `You are an assistant for ${tenantId === 'calvary' ? 'Calvary Baptist Church' : 'Christian Church Ministry'}. Summarize the following sermon in 2-3 sentences, and provide 3 key biblical takeaways as bullet points.\n\nSpeaker: ${metadata.speaker}\nTitle: ${metadata.title}\nScriptures: ${scriptures.join(", ") || "None specified"}\n\nTranscript:\n${fullText.slice(0, 7000)}\n\nFormat your response strictly as valid JSON with keys "summary" (string) and "key_points" (array of strings). Do NOT include code block markdown or any other text.`;
+          const prompt = `You are an assistant for ${tenantId === 'calvary' ? 'Calvary Baptist Church' : 'Christian Church Ministry'}. Summarize the following sermon in 2-3 sentences, provide 3 key biblical takeaways as bullet points, and extract all biblical scriptures or passages referenced or read (e.g. "James 3:1-12", "James 1:27", "1 Kings 20:11", "Matthew 18:6").\n\nSpeaker: ${metadata.speaker}\nTitle: ${metadata.title}\nScriptures: ${scriptures.join(", ") || "None specified"}\n\nTranscript:\n${fullText.slice(0, 7000)}\n\nFormat your response strictly as valid JSON with keys "summary" (string), "key_points" (array of strings), and "scriptures" (array of strings). Do NOT include code block markdown or any other text.`;
           
-          const aiRes = await this.env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
-            prompt,
-            max_tokens: 512
-          });
+          const aiResponse = await runWorkersAi(this.env, prompt, 512);
 
-          if (aiRes && aiRes.response) {
+          if (aiResponse) {
             try {
-              const cleaned = aiRes.response.trim().replace(/^```json\s*/i, '').replace(/\s*```$/i, '').trim();
+              const cleaned = aiResponse.trim().replace(/^```json\s*/i, '').replace(/\s*```$/i, '').trim();
               const parsed = JSON.parse(cleaned);
               if (parsed.summary) summary = parsed.summary;
               if (Array.isArray(parsed.key_points)) keyPointsJson = JSON.stringify(parsed.key_points);
+              if (Array.isArray(parsed.scriptures)) {
+                parsed.scriptures.forEach(s => { if (s && typeof s === 'string') scriptures.push(s.trim()); });
+              }
             } catch (jsonErr) {
-              summary = aiRes.response.slice(0, 500);
+              summary = aiResponse.slice(0, 500);
             }
           }
         } catch (aiErr) {
           console.error("AI Sermon Summary generation error:", aiErr);
+        }
+      }
+
+      // Merge deterministic regex-extracted scriptures from full text
+      const regexScriptures = extractScripturesFromText(fullText);
+      for (const ref of regexScriptures) {
+        if (!scriptures.includes(ref)) scriptures.push(ref);
+      }
+
+      if (this.env.DB) {
+        for (const ref of scriptures) {
+          if (!ref || typeof ref !== 'string') continue;
+          const cleanRef = ref.trim();
+          const m = cleanRef.match(/^([1-3]?\s*[A-Za-z]+(?:\s+[A-Za-z]+)?)\s+(\d+)(?::(\d+))?/);
+          const book = m ? m[1].trim() : cleanRef;
+          const chapterNum = m && m[2] ? parseInt(m[2], 10) : null;
+          const verseNum = m && m[3] ? parseInt(m[3], 10) : null;
+          await this.env.DB.prepare(`
+            INSERT INTO sermon_scriptures (tenant_id, sermon_id, reference, book, chapter, verse, detected_at_ms)
+            VALUES (?, ?, ?, ?, ?, ?, 0)
+          `).bind(tenantId, sermonId, cleanRef, book, chapterNum, verseNum).run().catch(console.error);
         }
       }
 
@@ -1366,38 +1532,45 @@ export default {
           try {
             const prompt = `You are an assistant for ${tenantId === 'calvary' ? 'Calvary Baptist Church' : 'Christian Church Ministry'}. Summarize the following sermon in 2-3 sentences, provide 3 key biblical takeaways as bullet points, and extract all biblical scriptures or passages referenced or read (e.g. "James 3:1-12", "James 1:27", "1 Kings 20:11", "Matthew 18:6").\n\nSpeaker: ${speaker}\nTitle: ${title}\n\nTranscript:\n${captionsText.slice(0, 7000)}\n\nFormat your response strictly as valid JSON with keys "summary" (string), "key_points" (array of strings), and "scriptures" (array of strings, e.g. ["James 3:1-12", "James 1:27"]). Do NOT include code block markdown or any other text.`;
 
-            const aiRes = await env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
-              prompt,
-              max_tokens: 512
-            });
+            const aiResponse = await runWorkersAi(env, prompt, 512);
 
-            if (aiRes && aiRes.response) {
-              const cleaned = aiRes.response.trim().replace(/^```json\s*/i, '').replace(/\s*```$/i, '').trim();
+            if (aiResponse) {
+              const cleaned = aiResponse.trim().replace(/^```json\s*/i, '').replace(/\s*```$/i, '').trim();
               try {
                 const parsed = JSON.parse(cleaned);
                 if (parsed.summary) summary = parsed.summary;
                 if (Array.isArray(parsed.key_points)) keyPointsJson = JSON.stringify(parsed.key_points);
-                if (Array.isArray(parsed.scriptures) && env.DB) {
-                  for (const ref of parsed.scriptures) {
-                    if (!ref || typeof ref !== 'string') continue;
-                    const cleanRef = ref.trim();
-                    if (!cleanRef) continue;
-                    const m = cleanRef.match(/^([1-3]?\s*[A-Za-z]+(?:\s+[A-Za-z]+)?)\s+(\d+)(?::(\d+))?/);
-                    const book = m ? m[1].trim() : cleanRef;
-                    const chapterNum = m && m[2] ? parseInt(m[2], 10) : null;
-                    const verseNum = m && m[3] ? parseInt(m[3], 10) : null;
-                    await env.DB.prepare(`
-                      INSERT INTO sermon_scriptures (tenant_id, sermon_id, reference, book, chapter, verse, detected_at_ms)
-                      VALUES (?, ?, ?, ?, ?, ?, 0)
-                    `).bind(tenantId, sermonId, cleanRef, book, chapterNum, verseNum).run().catch(console.error);
-                  }
+                if (Array.isArray(parsed.scriptures)) {
+                  parsed.scriptures.forEach(s => { if (s && typeof s === 'string') scriptures.push(s.trim()); });
                 }
               } catch {
-                summary = aiRes.response.slice(0, 500);
+                summary = aiResponse.slice(0, 500);
               }
             }
           } catch (aiErr) {
             console.error("Queue Workers AI synthesis error:", aiErr);
+          }
+        }
+
+        // Merge deterministic regex-extracted scriptures from full captionsText
+        const regexScriptures = extractScripturesFromText(captionsText);
+        for (const ref of regexScriptures) {
+          if (!scriptures.includes(ref)) scriptures.push(ref);
+        }
+
+        if (env.DB && scriptures.length > 0) {
+          for (const ref of scriptures) {
+            if (!ref || typeof ref !== 'string') continue;
+            const cleanRef = ref.trim();
+            if (!cleanRef) continue;
+            const m = cleanRef.match(/^([1-3]?\s*[A-Za-z]+(?:\s+[A-Za-z]+)?)\s+(\d+)(?::(\d+))?/);
+            const book = m ? m[1].trim() : cleanRef;
+            const chapterNum = m && m[2] ? parseInt(m[2], 10) : null;
+            const verseNum = m && m[3] ? parseInt(m[3], 10) : null;
+            await env.DB.prepare(`
+              INSERT INTO sermon_scriptures (tenant_id, sermon_id, reference, book, chapter, verse, detected_at_ms)
+              VALUES (?, ?, ?, ?, ?, ?, 0)
+            `).bind(tenantId, sermonId, cleanRef, book, chapterNum, verseNum).run().catch(console.error);
           }
         }
 
@@ -1434,13 +1607,10 @@ ${chText.slice(0, 3000)}
 
 Respond with ONLY the 1-sentence summary, no quotes, no markdown, no filler.`;
 
-                const aiRes = await env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
-                  prompt: chPrompt,
-                  max_tokens: 120
-                });
+                const chAiRes = await runWorkersAi(env, chPrompt, 120);
 
-                if (aiRes && aiRes.response) {
-                  const chSummary = aiRes.response.trim().replace(/^["']|["']$/g, '');
+                if (chAiRes) {
+                  const chSummary = chAiRes.trim().replace(/^["']|["']$/g, '');
                   await env.DB.prepare("UPDATE sermon_chapters SET summary = ? WHERE sermon_id = ? AND chapter_index = ?")
                     .bind(chSummary, sermonId, ch.chapter_index).run();
                   ch.summary = chSummary;
