@@ -24,12 +24,14 @@ const BANNED_HALLUCINATIONS = [
   "subtitles unavailable",
   "world",
   "1.5%",
-  "1.5%;"
+  "1.5%;",
+  "bring it in",
+  "damage"
 ];
 
 const PHANTOM_NOISE_TOKENS = new Set([
   "world", "you", "thanks", "bye", "watching", "subscribe", "subtitles", "yeah", "yes", "no",
-  "amen", "hello", "hey", "okay", "so", "and", "the", "a", "1.5%", "1.5%;", "1.5"
+  "amen", "hello", "hey", "okay", "so", "and", "the", "a", "1.5%", "1.5%;", "1.5", "bring", "damage"
 ]);
 
 function isHallucinationOrProfane(text) {
@@ -203,9 +205,9 @@ function formatCaption(text) {
   return clean;
 }
 
-const MIN_CHUNK_BYTES = 48000;  // ~1.5s of continuous speech for ultra-responsive low-latency broadcast
-const PAUSE_DEBOUNCE_MS = 380;  // 380ms natural breath / pause flush
-const MIN_PAUSE_BYTES = 6400;   // Flush on pause if at least 0.20s audio accumulated
+const MIN_CHUNK_BYTES = 160000; // ~5.0s of continuous speech for maximum Whisper acoustic context and natural sentence structure
+const PAUSE_DEBOUNCE_MS = 850;   // 850ms natural breath / pause flush
+const MIN_PAUSE_BYTES = 16000;   // Flush on pause if at least 0.5s audio accumulated
 
 async function ensureTables(db) {
   if (!db) return;
@@ -1118,27 +1120,28 @@ export class CaptionDurableObject {
       }
       const rms = Math.sqrt(sumSq / int16View.length);
 
-      // SILENCE REJECTION GATE: Drop only if audio is true ambient silence
-      if (rms < 120 && maxAmp < 200) {
+      // SILENCE REJECTION GATE: If energy is below ambient room noise floor (speaker stopped talking), drop buffer and DO NOT call Whisper!
+      if (rms < 320 || maxAmp < 450) {
+        this.audioChunks = [];
+        this.isFlushing = false;
         return;
       }
 
       // Dynamic peak gain normalization to boost soft speech to optimal Whisper volume (80% full scale)
-      if (maxAmp > 200 && maxAmp < 22000) {
+      if (maxAmp > 300 && maxAmp < 22000) {
         const gain = Math.min(8.0, 22000 / maxAmp);
         for (let i = 0; i < int16View.length; i++) {
           int16View[i] = Math.max(-32768, Math.min(32767, Math.round(int16View[i] * gain)));
         }
       }
 
-      // Retain 350ms trailing acoustic overlap (11,200 bytes) for boundary continuity AFTER gain normalization
-      const overlapBytes = Math.min(11200, pcmData.length);
+      // Retain 500ms trailing acoustic overlap (16,000 bytes) for boundary continuity
+      const overlapBytes = Math.min(16000, pcmData.length);
       const overlapChunk = pcmData.slice(pcmData.length - overlapBytes);
-      // Prepend normalized overlap back to live queue so next chunk has acoustic continuity
-      this.audioChunks.unshift(overlapChunk);
+      this.audioChunks = [overlapChunk];
 
-      // Prepend 150ms (4,800 bytes) of lead-in padding for clean phoneme attack
-      const leadInBytes = 4800;
+      // Prepend 200ms (6,400 bytes) of lead-in padding for clean phoneme attack
+      const leadInBytes = 6400;
       const totalPcmBytes = leadInBytes + pcmData.length;
 
       const wavBuffer = new Uint8Array(44 + totalPcmBytes);
