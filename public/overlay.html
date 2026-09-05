@@ -214,10 +214,24 @@
       }, 12000); // Display scripture badge for 12 seconds
     }
 
+    let reconnectAttempts = 0;
+    let pingInterval = null;
+
     function connectWebSocket() {
       if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
       const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-      ws = new WebSocket(`${protocol}//${location.host}/api/ws`);
+      const roomParam = new URLSearchParams(window.location.search).get('room') || new URLSearchParams(window.location.search).get('tenant') || 'demo';
+      ws = new WebSocket(`${protocol}//${location.host}/api/ws?room=${encodeURIComponent(roomParam)}`);
+
+      ws.onopen = () => {
+        reconnectAttempts = 0;
+        if (pingInterval) clearInterval(pingInterval);
+        pingInterval = setInterval(() => {
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send("ping");
+          }
+        }, 15000); // 15-second edge keepalive ping
+      };
 
       ws.onmessage = (event) => {
         try {
@@ -244,7 +258,13 @@
 
       ws.onclose = () => {
         ws = null;
-        setTimeout(connectWebSocket, 2000);
+        if (pingInterval) {
+          clearInterval(pingInterval);
+          pingInterval = null;
+        }
+        reconnectAttempts++;
+        const backoffMs = Math.min(4000, Math.pow(1.5, reconnectAttempts) * 800);
+        setTimeout(connectWebSocket, backoffMs);
       };
     }
 

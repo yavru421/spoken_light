@@ -34,7 +34,7 @@ async function runHarnessTest() {
       });
       const resJson = await response.json();
       const duration = Date.now() - startTime;
-      console.log(`[TEST HARNESS] Chunk ${offset / chunkSize + 1} (${chunk.length} bytes) -> Ingest Status: ${resJson.status} [${duration}ms]`);
+      console.log(`[TEST HARNESS] Chunk ${offset / chunkSize + 1} (${chunk.length} bytes) -> Response: ${JSON.stringify(resJson)} [${duration}ms]`);
     } catch (err) {
       console.error('[TEST HARNESS] Error posting chunk:', err.message);
     }

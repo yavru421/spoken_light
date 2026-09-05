@@ -80,6 +80,12 @@ CREATE TABLE IF NOT EXISTS system_config (
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS context (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  theological_context TEXT NOT NULL,
+  context_string TEXT
+);
+
 CREATE INDEX IF NOT EXISTS idx_sermon_captions_sermon_id ON sermon_captions(sermon_id);
 CREATE INDEX IF NOT EXISTS idx_sermon_scriptures_sermon_id ON sermon_scriptures(sermon_id);
 CREATE INDEX IF NOT EXISTS idx_sermon_chapters_sermon_id ON sermon_chapters(sermon_id);

@@ -319,9 +319,9 @@
   <div class="container">
     <div class="header-bar">
       <div class="title-group">
-        <h1>🎙️ Spoken Light <span class="badge-slice">Booth Slice</span></h1>
-        <div style="font-size:0.85rem; color:var(--muted); margin-top:2px;">
-          Calvary Baptist Church • High School AV Soundboard Console
+        <h1 id="boothHeading">🎙️ Spoken Light <span id="boothBadge" class="badge-slice">Demo Bench</span></h1>
+        <div id="boothSubhead" style="font-size:0.85rem; color:var(--muted); margin-top:2px;">
+          Loading Sound Booth Room...
         </div>
       </div>
       <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
@@ -471,7 +471,7 @@
         </div>
 
         <div style="background:#090d16; border:1px dashed #334155; padding:10px 12px; border-radius:8px; font-size:0.82rem; color:#94a3b8;">
-          📺 <b>OBS Studio Setup:</b> Add Browser Source &rarr; URL: <code style="color:#93c5fd;">https://spokenlight.dondlingergc.com/overlay?tenant=calvary</code> &rarr; Width: 1920, Height: 250.
+          📺 <b>OBS Studio Setup:</b> Add Browser Source &rarr; URL: <code id="obsGuideUrl" style="color:#93c5fd;">https://spokenlight.dondlingergc.com/overlay?room=calvary</code> &rarr; Width: 1920, Height: 250.
         </div>
       </div>
 
@@ -481,7 +481,80 @@
     </div>
   </div>
 
+  <!-- CALVARY SANCTUARY AUTH GATE MODAL -->
+  <div id="calvaryAuthGateModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.92); backdrop-filter:blur(8px); z-index:99999; align-items:center; justify-content:center; padding:20px;">
+    <div style="background:#0d1527; border:1px solid #2563eb; border-radius:16px; max-width:460px; width:100%; padding:28px; box-shadow:0 16px 48px rgba(0,0,0,0.95); display:flex; flex-direction:column; gap:16px;">
+      <div style="font-size:1.3rem; font-weight:800; color:#fff; display:flex; align-items:center; gap:8px; border-bottom:1px solid #1f2937; padding-bottom:12px;">
+        🔒 Calvary Sanctuary Sound Booth
+      </div>
+      <p style="color:var(--muted); font-size:0.9rem; line-height:1.45;">
+        You are connecting to the live Calvary Baptist Church broadcast room.
+      </p>
+
+      <!-- 1-TAP INSTANT UNLOCK -->
+      <button type="button" id="oneTapCalvaryBtn" style="background:linear-gradient(135deg, #2563eb, #1d4ed8); color:#fff; border:none; padding:16px; border-radius:12px; font-weight:800; font-size:1.1rem; cursor:pointer; box-shadow:0 4px 18px rgba(37,99,235,0.4); display:flex; align-items:center; justify-content:center; gap:8px;">
+        ⚡ 1-Tap Quick Unlock (Calvary) &rarr;
+      </button>
+
+      <div style="display:flex; align-items:center; gap:10px; color:#64748b; font-size:0.78rem; margin:2px 0;">
+        <div style="flex:1; height:1px; background:#1f2937;"></div>
+        <span>OR ENTER PIN / PASSPHRASE</span>
+        <div style="flex:1; height:1px; background:#1f2937;"></div>
+      </div>
+
+      <form id="calvaryAuthForm" style="display:flex; flex-direction:column; gap:14px;">
+        <div>
+          <label style="font-size:0.8rem; font-weight:700; color:var(--muted); display:block; margin-bottom:4px;">Soundboard PIN or Passphrase</label>
+          <input type="password" id="boothPassInput" required placeholder="Enter 469 or passphrase" style="width:100%; padding:12px; border-radius:8px; border:1px solid #1f2937; background:#070a12; color:#fff; font-size:1rem;">
+        </div>
+        <div id="calvaryAuthError" style="color:#ef4444; font-size:0.85rem; display:none;"></div>
+        <button type="submit" id="boothVerifyBtn" class="btn-primary" style="padding:14px; font-size:1.05rem; font-weight:800; cursor:pointer; border:none; border-radius:10px;">
+          🔓 UNLOCK WITH PIN &rarr;
+        </button>
+      </form>
+      <div style="display:flex; justify-content:space-between; font-size:0.8rem; color:var(--muted); border-top:1px solid #1f2937; padding-top:8px;">
+        <span>Testing instead?</span>
+        <a href="/booth?room=demo" style="color:#60a5fa; text-decoration:none; font-weight:700;">Switch to Demo Sandbox &rarr;</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- DEMO INTAKE GATE MODAL (SHOWN ONCE PER DEMO USER) -->
+  <div id="demoIntakeGateModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.92); backdrop-filter:blur(8px); z-index:99999; align-items:center; justify-content:center; padding:20px;">
+    <div style="background:#0d1527; border:1px solid #d97706; border-radius:16px; max-width:500px; width:100%; padding:28px; box-shadow:0 16px 48px rgba(0,0,0,0.95); display:flex; flex-direction:column; gap:16px;">
+      <div style="font-size:1.3rem; font-weight:800; color:#fff; display:flex; align-items:center; gap:8px; border-bottom:1px solid #1f2937; padding-bottom:12px;">
+        🎙️ Unlock Unlimited Live Streaming
+      </div>
+      <p style="color:var(--muted); font-size:0.9rem; line-height:1.45;">
+        You've completed your free 30-second / 100-word preview! Enter your church details below to unlock unlimited testing on the demo bench.
+      </p>
+      <form id="demoIntakeForm" style="display:flex; flex-direction:column; gap:12px;">
+        <div>
+          <label style="font-size:0.8rem; font-weight:700; color:var(--muted); display:block; margin-bottom:4px;">Church Name *</label>
+          <input type="text" id="inBoothDemoChurch" required placeholder="e.g. Faith Community Church" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid #1f2937; background:#070a12; color:#fff; font-size:0.95rem;">
+        </div>
+        <div>
+          <label style="font-size:0.8rem; font-weight:700; color:var(--muted); display:block; margin-bottom:4px;">Your Name & Role *</label>
+          <input type="text" id="inBoothDemoName" required placeholder="e.g. Pastor Mike / Sound Tech" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid #1f2937; background:#070a12; color:#fff; font-size:0.95rem;">
+        </div>
+        <div>
+          <label style="font-size:0.8rem; font-weight:700; color:var(--muted); display:block; margin-bottom:4px;">Email Address *</label>
+          <input type="email" id="inBoothDemoEmail" required placeholder="e.g. mike@faithcommunity.org" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid #1f2937; background:#070a12; color:#fff; font-size:0.95rem;">
+        </div>
+        <button type="submit" id="inBoothDemoBtn" class="btn-primary" style="margin-top:4px; padding:14px; font-size:1.05rem; font-weight:800; cursor:pointer; border:none; border-radius:10px; background:linear-gradient(135deg, #d97706, #b45309);">
+          🚀 UNLOCK DEMO BENCH &rarr;
+        </button>
+      </form>
+      <div style="font-size:0.82rem; color:var(--muted); text-align:center; padding-top:8px; border-top:1px solid #1f2937;">
+        Questions or custom soundboard setups? Email: <a href="mailto:dondlingergeneralcontracting@gmail.com?subject=Spoken%20Light%20Demo%20Inquiry" style="color:#60a5fa; text-decoration:none; font-weight:700;">dondlingergeneralcontracting@gmail.com</a>
+      </div>
+    </div>
+  </div>
+
   <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const activeRoom = (urlParams.get('room') || urlParams.get('tenant') || 'demo').toLowerCase();
+
     let isStreaming = false;
     let isArchiveArmed = true; // Armed by default
     let isRecordingArchive = false;
@@ -574,13 +647,168 @@
     });
 
     copyObsBtn.addEventListener('click', () => {
-      const tenantParam = new URLSearchParams(window.location.search).get('tenant') || 'calvary';
-      const overlayUrl = `${window.location.origin}/overlay?tenant=${encodeURIComponent(tenantParam)}`;
+      const overlayUrl = `${window.location.origin}/overlay?room=${encodeURIComponent(activeRoom)}`;
       navigator.clipboard.writeText(overlayUrl).then(() => {
         showToast("Copied OBS Overlay Link: " + overlayUrl);
       }).catch(() => {
         prompt("OBS Overlay URL:", overlayUrl);
       });
+    });
+
+    // Room Initialization & Access Control
+    const boothBadge = document.getElementById('boothBadge');
+    const boothSubhead = document.getElementById('boothSubhead');
+    const obsGuideUrl = document.getElementById('obsGuideUrl');
+    const calvaryGateModal = document.getElementById('calvaryAuthGateModal');
+    const demoGateModal = document.getElementById('demoIntakeGateModal');
+
+    // Auto-login via URL parameters (0-click / bookmark access)
+    // e.g. /booth?room=calvary&key=469 or /booth?room=calvary&key=469airportave
+    const urlKey = (urlParams.get('key') || urlParams.get('pass') || urlParams.get('k') || '').trim();
+    if (urlKey && (urlKey === '469' || urlKey === '4690' || urlKey === '469airportave')) {
+      localStorage.setItem('spokenlight_auth_token', 'auth_calvary_url_' + Date.now());
+      localStorage.setItem('spokenlight_tenant', 'calvary');
+      localStorage.setItem('spokenlight_church_name', 'Calvary Baptist Church');
+    }
+
+    if (activeRoom === 'calvary') {
+      if (boothBadge) {
+        boothBadge.innerText = 'CALVARY LIVE BOOTH';
+        boothBadge.style.background = '#1e3a8a';
+        boothBadge.style.color = '#93c5fd';
+      }
+      if (boothSubhead) {
+        boothSubhead.innerText = 'Calvary Baptist Church • Sanctuary AV Soundboard Console (Protected Live Feed)';
+      }
+      if (obsGuideUrl) {
+        obsGuideUrl.innerText = `${window.location.origin}/overlay?room=calvary`;
+      }
+      const isAuthed = localStorage.getItem('spokenlight_auth_token') && localStorage.getItem('spokenlight_tenant') === 'calvary';
+      if (!isAuthed && calvaryGateModal) {
+        calvaryGateModal.style.display = 'flex';
+      }
+    } else {
+      const isRegistered = localStorage.getItem('spokenlight_demo_registered');
+      if (boothBadge) {
+        boothBadge.innerText = isRegistered ? 'DEMO BENCH • UNLIMITED' : 'DEMO BENCH • 30S / 100-WORD FREE PREVIEW';
+        boothBadge.style.background = '#7c2d12';
+        boothBadge.style.color = '#fed7aa';
+      }
+      if (boothSubhead) {
+        boothSubhead.innerText = 'Public Demo Sandbox • Instant Mic Test (No Information Required for Free Preview)';
+      }
+      if (obsGuideUrl) {
+        obsGuideUrl.innerText = `${window.location.origin}/overlay?room=demo`;
+      }
+      // Demo bench starts unlocked for immediate testing! Modal triggers only after 30s or 100 words.
+    }
+
+    let demoActiveSeconds = 0;
+    let demoWordCount = 0;
+    let demoLimitReached = false;
+    let demoInterval = null;
+    const DEMO_MAX_SECONDS = 30;
+    const DEMO_MAX_WORDS = 100;
+
+    function checkDemoLimits() {
+      if (activeRoom !== 'demo') return;
+      if (localStorage.getItem('spokenlight_demo_registered')) return;
+      if (demoLimitReached) return;
+
+      if (demoActiveSeconds >= DEMO_MAX_SECONDS || demoWordCount >= DEMO_MAX_WORDS) {
+        demoLimitReached = true;
+        if (demoInterval) {
+          clearInterval(demoInterval);
+          demoInterval = null;
+        }
+        if (isStreaming) {
+          mainToggleBtn.click();
+        }
+        if (demoGateModal) {
+          demoGateModal.style.display = 'flex';
+        }
+        showToast('⏱️ Free demo preview complete (30s / 100 words). Enter your church details to unlock unlimited testing!', '#d97706');
+      }
+    }
+
+    // 1-Tap Quick Unlock for Calvary Soundboard
+    document.getElementById('oneTapCalvaryBtn')?.addEventListener('click', () => {
+      localStorage.setItem('spokenlight_auth_token', 'auth_calvary_onetap_' + Date.now());
+      localStorage.setItem('spokenlight_tenant', 'calvary');
+      localStorage.setItem('spokenlight_church_name', 'Calvary Baptist Church');
+      if (calvaryGateModal) calvaryGateModal.style.display = 'none';
+      showToast('⚡ Instant Access: Calvary Soundboard Unlocked!', '#16a34a');
+    });
+
+    // In-booth Calvary authentication handler (supports 469 PIN or full passphrase)
+    document.getElementById('calvaryAuthForm')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const errEl = document.getElementById('calvaryAuthError');
+      errEl.style.display = 'none';
+      const pass = document.getElementById('boothPassInput').value.trim();
+      const btn = document.getElementById('boothVerifyBtn');
+
+      if (pass === '469' || pass === '4690' || pass === '469airportave') {
+        localStorage.setItem('spokenlight_auth_token', 'auth_calvary_pin_' + Date.now());
+        localStorage.setItem('spokenlight_tenant', 'calvary');
+        localStorage.setItem('spokenlight_church_name', 'Calvary Baptist Church');
+        calvaryGateModal.style.display = 'none';
+        showToast('🔓 Sanctuary Soundboard Unlocked!', '#16a34a');
+        return;
+      }
+
+      btn.innerText = 'Verifying...';
+
+      try {
+        const res = await fetch('/api/auth/church', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ church_code: 'calvary', passphrase: pass })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          localStorage.setItem('spokenlight_auth_token', data.token);
+          localStorage.setItem('spokenlight_tenant', data.tenant_id);
+          calvaryGateModal.style.display = 'none';
+          showToast('🔓 Sanctuary Soundboard Unlocked!', '#16a34a');
+        } else {
+          errEl.innerText = data.error || 'Invalid PIN or passphrase';
+          errEl.style.display = 'block';
+          btn.innerText = '🔓 UNLOCK WITH PIN →';
+        }
+      } catch (err) {
+        errEl.innerText = 'Connection error';
+        errEl.style.display = 'block';
+        btn.innerText = '🔓 UNLOCK WITH PIN →';
+      }
+    });
+
+    // In-booth Demo registration handler
+    document.getElementById('demoIntakeForm')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const payload = {
+        church_name: document.getElementById('inBoothDemoChurch').value.trim(),
+        contact_name: document.getElementById('inBoothDemoName').value.trim(),
+        email: document.getElementById('inBoothDemoEmail').value.trim()
+      };
+      try {
+        await fetch('/api/demo/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      } catch (e) {}
+      localStorage.setItem('spokenlight_demo_registered', '1');
+      demoLimitReached = false;
+      if (demoInterval) {
+        clearInterval(demoInterval);
+        demoInterval = null;
+      }
+      demoGateModal.style.display = 'none';
+      if (boothBadge) {
+        boothBadge.innerText = 'DEMO BENCH • UNLIMITED';
+      }
+      showToast('🚀 Demo Sandbox Activated — Unlimited Testing Unlocked!', '#16a34a');
     });
 
     function downloadTranscript() {
@@ -678,6 +906,11 @@
       wordCountTotal += words;
       hudCaptionCount.innerText = captionCountTotal;
       hudWordCount.innerText = wordCountTotal;
+
+      if (activeRoom === 'demo' && !localStorage.getItem('spokenlight_demo_registered')) {
+        demoWordCount += words;
+        checkDemoLimits();
+      }
     }
 
     async function startArchiveRecording() {
@@ -767,8 +1000,7 @@
     function connectWebSocket() {
       if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
       const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const tenantParam = new URLSearchParams(window.location.search).get('tenant') || '';
-      const wsUrl = `${protocol}//${location.host}/api/ws${tenantParam ? '?tenant=' + encodeURIComponent(tenantParam) : ''}`;
+      const wsUrl = `${protocol}//${location.host}/api/ws?room=${encodeURIComponent(activeRoom)}`;
       ws = new WebSocket(wsUrl);
       ws.binaryType = 'arraybuffer';
 
@@ -834,6 +1066,21 @@
 
     mainToggleBtn.addEventListener('click', async () => {
       if (!isStreaming) {
+        if (activeRoom === 'demo' && !localStorage.getItem('spokenlight_demo_registered')) {
+          if (demoLimitReached || demoActiveSeconds >= DEMO_MAX_SECONDS || demoWordCount >= DEMO_MAX_WORDS) {
+            demoLimitReached = true;
+            if (demoGateModal) demoGateModal.style.display = 'flex';
+            showToast('⏱️ Free demo preview complete (30s / 100 words). Enter info below to continue!', '#d97706');
+            return;
+          }
+          if (demoInterval) clearInterval(demoInterval);
+          demoInterval = setInterval(() => {
+            if (isStreaming) {
+              demoActiveSeconds++;
+              checkDemoLimits();
+            }
+          }, 1000);
+        }
         try {
           connectWebSocket();
           const deviceId = audioSelect.value;
@@ -902,6 +1149,10 @@
         }
       } else {
         isStreaming = false;
+        if (demoInterval) {
+          clearInterval(demoInterval);
+          demoInterval = null;
+        }
         if (animFrame) cancelAnimationFrame(animFrame);
         if (scriptProcessor) scriptProcessor.disconnect();
         if (audioStream) audioStream.getTracks().forEach(t => t.stop());
