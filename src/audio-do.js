@@ -1180,11 +1180,16 @@ export class CaptionDurableObject {
         }
       }
 
-      // Dynamic Context Biasing: D1 Lexicon + Recent Scripture References
+      // Dynamic Context Biasing: D1 Lexicon + Scripture Hint + Trailing 200-char Continuity Seeding
       const scriptureHint = this.getRecentScriptureHint();
-      const aiPrompt = scriptureHint
-        ? `Context: ${this.d1Context}. Scripture: ${scriptureHint}.`
-        : `Context: ${this.d1Context}.`;
+      const trailingContext = (this.lastTranscription || "").slice(-200).trim();
+      let aiPrompt = `Context: ${this.d1Context || "Gospel, Jesus Christ, Holy Spirit, Scripture, Faith, Grace, Salvation, King of Kings"}.`;
+      if (scriptureHint) {
+        aiPrompt += ` Scripture: ${scriptureHint}.`;
+      }
+      if (trailingContext) {
+        aiPrompt += ` Previous: ${trailingContext}`;
+      }
 
       try {
         // Primary Edge Inference: Large V3 Turbo with 1800ms Latency Circuit Breaker
