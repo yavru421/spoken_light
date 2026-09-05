@@ -379,22 +379,16 @@
           <div class="hud-row">
             <div class="rec-indicator">
               <div class="dot-pulse"></div>
-              <span>RECORDING ARCHIVE TO CLOUD D1</span>
+              <span>🔴 RECORDING ARCHIVE TO CLOUD D1</span>
             </div>
-            <div id="recStopwatch" style="font-family:monospace; font-size:1.15rem; font-weight:800; color:#f8fafc;">00:00</div>
+            <div id="recStopwatch" style="font-family:monospace; font-size:1.25rem; font-weight:800; color:#f8fafc;">00:00</div>
           </div>
-          <div class="hud-row">
-            <div id="hudCurrentChapter" class="chapter-pill">
-              <span>📌 Chapter 1: Opening & Scripture Reading</span>
+          <div class="hud-row" style="margin-top:2px;">
+            <div style="font-size:0.88rem; color:var(--muted);">
+              Verbatim Captions: <span id="hudCaptionCount" style="color:#22c55e; font-weight:800;">0</span>
             </div>
-            <div style="font-size:0.82rem; color:var(--muted);">
-              Captions: <span id="hudCaptionCount" style="color:#fff; font-weight:700;">0</span> | Words: <span id="hudWordCount" style="color:#fff; font-weight:700;">0</span>
-            </div>
-          </div>
-          <div id="hudScripturesRow" style="display:flex; flex-wrap:wrap; gap:6px; align-items:center;">
-            <span style="font-size:0.75rem; color:var(--muted);">Detected Verses:</span>
-            <div id="hudScripturesList" style="display:flex; gap:6px; flex-wrap:wrap;">
-              <span style="font-size:0.75rem; color:#64748b; font-style:italic;">None detected yet</span>
+            <div style="font-size:0.88rem; color:var(--muted);">
+              Total Words: <span id="hudWordCount" style="color:#60a5fa; font-weight:800;">0</span>
             </div>
           </div>
         </div>
@@ -581,10 +575,8 @@
     const archiveInputs = document.getElementById('archiveInputs');
     const archiveHud = document.getElementById('archiveHud');
     const recStopwatch = document.getElementById('recStopwatch');
-    const hudCurrentChapter = document.getElementById('hudCurrentChapter');
     const hudCaptionCount = document.getElementById('hudCaptionCount');
     const hudWordCount = document.getElementById('hudWordCount');
-    const hudScripturesList = document.getElementById('hudScripturesList');
     const sermonTitleInput = document.getElementById('sermonTitleInput');
     const sermonSpeakerInput = document.getElementById('sermonSpeakerInput');
     const adminLineTop = document.getElementById('adminLineTop');
@@ -952,9 +944,6 @@
       archiveStartTime = Date.now();
       captionCountTotal = 0;
       wordCountTotal = 0;
-      detectedScriptures.clear();
-      hudScripturesList.innerHTML = '<span style="font-size:0.75rem; color:#64748b; font-style:italic;">None detected yet</span>';
-      hudCurrentChapter.innerHTML = '<span>📌 Chapter 1: Opening & Scripture Reading</span>';
 
       if (archiveTimerInterval) clearInterval(archiveTimerInterval);
       archiveTimerInterval = setInterval(() => {
@@ -1029,23 +1018,6 @@
           } else if (data.type === 'clear') {
             adminSentenceStack = [];
             renderAdminStack();
-          } else if (data.type === 'chapter_slice') {
-            const ch = data.chapter;
-            hudCurrentChapter.innerHTML = `<span>📌 Chapter ${ch.chapter_index}: ${ch.title}</span>`;
-            showToast(`Sermon Sliced: Chapter ${ch.chapter_index} - ${ch.title}`, "#3b82f6");
-          } else if (data.type === 'scripture_detected') {
-            const ref = data.reference;
-            if (!detectedScriptures.has(ref)) {
-              detectedScriptures.add(ref);
-              if (hudScripturesList.innerHTML.includes("None detected")) {
-                hudScripturesList.innerHTML = "";
-              }
-              const pill = document.createElement("span");
-              pill.className = "scripture-pill";
-              pill.innerText = "📖 " + ref;
-              hudScripturesList.appendChild(pill);
-              showToast(`Scripture Anchored: ${ref}`, "#f59e0b");
-            }
           } else if (data.type === 'archive_completed') {
             showToast(`✅ Archive Complete: ${data.title} (${data.durationSeconds}s)`, "#16a34a");
           } else if (data.type === 'archive_error') {
@@ -1107,16 +1079,168 @@
           source.connect(scriptProcessor);
           scriptProcessor.connect(audioContext.destination);
 
-          scriptProcessor.onaudioprocess = (e) => {
-            if (!isStreaming || currentMode === "worship") return;
-            const float32Data = e.inputBuffer.getChannelData(0);
-            const pcm16 = new Int16Array(float32Data.length);
-            for (let i = 0; i < float32Data.length; i++) {
-              let s = Math.max(-1, Math.min(1, float32Data[i]));
-              pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+          // Client-Side Gating & WAV Packaging Benchmarks
+          const SAMPLE_RATE = 16000;
+          const RMS_THRESHOLD = 0.008;
+          const PEAK_THRESHOLD = 0.035;
+          const PAUSE_DEBOUNCE_MS = 850;
+          const MAX_BATCH_DURATION_SEC = 5.0;
+          const PRE_ROLL_SAMPLES = Math.floor(SAMPLE_RATE * 0.20); // 200ms pre-roll circular buffer
+
+          let speechBuffer = [];
+          let preRollBuffer = [];
+          let silenceTimer = null;
+          let uploadQueue = [];
+          let isUploading = false;
+
+          function writeWavString(view, offset, string) {
+            for (let i = 0; i < string.length; i++) {
+              view.setUint8(offset + i, string.charCodeAt(i));
             }
-            if (ws && ws.readyState === WebSocket.OPEN) {
-              ws.send(pcm16.buffer);
+          }
+
+          function encodeWAV(samples) {
+            const buffer = new ArrayBuffer(44 + samples.length * 2);
+            const view = new DataView(buffer);
+
+            // RIFF header
+            writeWavString(view, 0, 'RIFF');
+            view.setUint32(4, 36 + samples.length * 2, true);
+            writeWavString(view, 8, 'WAVE');
+            writeWavString(view, 12, 'fmt ');
+            view.setUint32(16, 16, true);
+            view.setUint16(20, 1, true); // PCM format
+            view.setUint16(22, 1, true); // Mono
+            view.setUint32(24, SAMPLE_RATE, true);
+            view.setUint32(28, SAMPLE_RATE * 2, true); // Byte rate
+            view.setUint16(32, 2, true); // Block align
+            view.setUint16(34, 16, true); // 16-bit
+            writeWavString(view, 36, 'data');
+            view.setUint32(40, samples.length * 2, true);
+
+            // Float32 to 16-bit PCM
+            let offset = 44;
+            for (let i = 0; i < samples.length; i++, offset += 2) {
+              const s = Math.max(-1, Math.min(1, samples[i]));
+              view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+            }
+            return new Blob([view], { type: 'audio/wav' });
+          }
+
+          async function processUploadQueue() {
+            if (isUploading || uploadQueue.length === 0) return;
+            isUploading = true;
+
+            while (uploadQueue.length > 0) {
+              const wavBlob = uploadQueue.shift();
+              try {
+                // Last 250 characters of local transcript to seed Whisper acoustic continuity
+                const recentHistory = (sessionTranscript.slice(-3).join(" ") || "").slice(-250);
+                const b64Context = btoa(unescape(encodeURIComponent(recentHistory)));
+
+                const res = await fetch(`/api/transcribe?room=${encodeURIComponent(activeRoom)}`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'audio/wav',
+                    'X-Context-Continuity': b64Context
+                  },
+                  body: wavBlob
+                });
+
+                if (res.ok) {
+                  const data = await res.json();
+                  if (data.ok && data.text) {
+                    pushAdminCaption(data.text);
+                  }
+                }
+              } catch (err) {
+                console.warn("[Gating] Upload chunk network error (will retry or continue):", err);
+              }
+            }
+            isUploading = false;
+          }
+
+          function flushSpeechChunk() {
+            if (speechBuffer.length < (SAMPLE_RATE * 0.4)) {
+              // Ignore sub-400ms micro-glitches
+              speechBuffer = [];
+              if (silenceTimer) {
+                clearTimeout(silenceTimer);
+                silenceTimer = null;
+              }
+              return;
+            }
+
+            const samples = Float32Array.from(speechBuffer);
+            speechBuffer = [];
+            if (silenceTimer) {
+              clearTimeout(silenceTimer);
+              silenceTimer = null;
+            }
+
+            const wavBlob = encodeWAV(samples);
+            uploadQueue.push(wavBlob);
+            processUploadQueue();
+          }
+
+          scriptProcessor.onaudioprocess = (e) => {
+            if (!isStreaming || currentMode === "worship") {
+              speechBuffer = [];
+              if (silenceTimer) {
+                clearTimeout(silenceTimer);
+                silenceTimer = null;
+              }
+              return;
+            }
+
+            const inputData = e.inputBuffer.getChannelData(0);
+
+            // 1. Calculate Energy (RMS & Peak)
+            let sum = 0;
+            let peak = 0;
+            for (let i = 0; i < inputData.length; i++) {
+              const val = inputData[i];
+              sum += val * val;
+              if (Math.abs(val) > peak) peak = Math.abs(val);
+            }
+            const rms = Math.sqrt(sum / inputData.length);
+            const isSpeaking = (rms > RMS_THRESHOLD || peak > PEAK_THRESHOLD);
+
+            if (isSpeaking) {
+              if (silenceTimer) {
+                clearTimeout(silenceTimer);
+                silenceTimer = null;
+              }
+
+              // If starting a new speech burst, prepend the 200ms pre-roll
+              if (speechBuffer.length === 0 && preRollBuffer.length > 0) {
+                speechBuffer.push(...preRollBuffer);
+                preRollBuffer = [];
+              }
+
+              speechBuffer.push(...inputData);
+
+              // 5-second continuous speech ceiling
+              const currentDurationSec = speechBuffer.length / SAMPLE_RATE;
+              if (currentDurationSec >= MAX_BATCH_DURATION_SEC) {
+                flushSpeechChunk();
+              }
+            } else {
+              // During silence, update circular 200ms pre-roll buffer
+              preRollBuffer.push(...inputData);
+              if (preRollBuffer.length > PRE_ROLL_SAMPLES) {
+                preRollBuffer.splice(0, preRollBuffer.length - PRE_ROLL_SAMPLES);
+              }
+
+              // If we were recording active speech, start the 850ms breath pause debounce
+              if (speechBuffer.length > 0) {
+                speechBuffer.push(...inputData); // Include tail of phoneme decay
+                if (!silenceTimer) {
+                  silenceTimer = setTimeout(() => {
+                    flushSpeechChunk();
+                  }, PAUSE_DEBOUNCE_MS);
+                }
+              }
             }
           };
 

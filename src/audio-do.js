@@ -181,12 +181,6 @@ const BIBLICAL_REPLACEMENTS = [
   [/\baltar call\b/gi, "altar call"]
 ];
 
-// Regex to format spoken scripture references (e.g. "John 3 16" -> "John 3:16", "Romans 8 28" -> "Romans 8:28")
-const SCRIPTURE_REF_PATTERN = /\b(Genesis|Exodus|Leviticus|Numbers|Deuteronomy|Joshua|Judges|Ruth|1 Samuel|2 Samuel|1 Kings|2 Kings|1 Chronicles|2 Chronicles|Ezra|Nehemiah|Esther|Job|Psalms|Psalm|Proverbs|Ecclesiastes|Isaiah|Jeremiah|Lamentations|Ezekiel|Daniel|Hosea|Joel|Amos|Obadiah|Jonah|Micah|Nahum|Habakkuk|Zephaniah|Haggai|Zechariah|Malachi|Matthew|Mark|Luke|John|Acts|Romans|1 Corinthians|2 Corinthians|Galatians|Ephesians|Philippians|Colossians|1 Thessalonians|2 Thessalonians|1 Timothy|2 Timothy|Titus|Philemon|Hebrews|James|1 Peter|2 Peter|1 John|2 John|3 John|Jude|Revelation)\s+(\d{1,3})\s+(\d{1,3})\b/g;
-
-// Regex to detect already-formatted scripture references (e.g. "John 3:16", "Romans 8:28", "1 Corinthians 13:4-8")
-const DETECT_SCRIPTURE_PATTERN = /\b(Genesis|Exodus|Leviticus|Numbers|Deuteronomy|Joshua|Judges|Ruth|1\s+Samuel|2\s+Samuel|1\s+Kings|2\s+Kings|1\s+Chronicles|2\s+Chronicles|Ezra|Nehemiah|Esther|Job|Psalms|Psalm|Proverbs|Ecclesiastes|Song\s+of\s+Solomon|Isaiah|Jeremiah|Lamentations|Ezekiel|Daniel|Hosea|Joel|Amos|Obadiah|Jonah|Micah|Nahum|Habakkuk|Zephaniah|Haggai|Zechariah|Malachi|Matthew|Mark|Luke|John|Acts|Romans|1\s+Corinthians|2\s+Corinthians|Galatians|Ephesians|Philippians|Colossians|1\s+Thessalonians|2\s+Thessalonians|1\s+Timothy|2\s+Timothy|Titus|Philemon|Hebrews|James|1\s+Peter|2\s+Peter|1\s+John|2\s+John|3\s+John|Jude|Revelation)\s+(\d{1,3}):(\d{1,3}(?:-\d{1,3})?)\b/gi;
-
 function formatCaption(text) {
   if (!text) return "";
   let clean = text.trim().replace(/\s+/g, ' ');
@@ -196,9 +190,6 @@ function formatCaption(text) {
   for (const [pattern, replacement] of BIBLICAL_REPLACEMENTS) {
     clean = clean.replace(pattern, replacement);
   }
-
-  // Format Chapter & Verse (e.g., "John 3 16" -> "John 3:16")
-  clean = clean.replace(SCRIPTURE_REF_PATTERN, "$1 $2:$3");
 
   clean = clean.charAt(0).toUpperCase() + clean.slice(1);
   if (clean.endsWith(',')) clean = clean.slice(0, -1);
@@ -720,31 +711,92 @@ export class CaptionDurableObject {
       }
     }
 
-    if (url.pathname === "/api/audio" && request.method === "POST") {
+    if (url.pathname === "/api/transcribe" && request.method === "POST") {
       try {
-        const arrayBuf = await request.arrayBuffer();
-        if (!arrayBuf || arrayBuf.byteLength === 0) {
-          return new Response(JSON.stringify({ ok: false, error: "Empty audio buffer" }), {
+        const wavBuffer = await request.arrayBuffer();
+        if (!wavBuffer || wavBuffer.byteLength < 1000) {
+          return new Response(JSON.stringify({ ok: false, error: "Empty or invalid WAV buffer" }), {
             status: 400,
             headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
           });
         }
-        const chunk = new Uint8Array(arrayBuf);
-        this.audioChunks.push(chunk);
-        this.lastAudioActivityTime = Date.now();
 
-        const totalBytes = this.audioChunks.reduce((sum, c) => sum + c.length, 0);
-        if (totalBytes >= MIN_CHUNK_BYTES) {
-          this.flushToWhisper().catch(console.error);
+        // 1. Retrieve sliding-window continuity from client headers
+        const base64Context = request.headers.get("X-Context-Continuity") || "";
+        let slidingContext = "";
+        if (base64Context) {
+          try {
+            slidingContext = decodeURIComponent(escape(atob(base64Context)));
+          } catch (_) {}
         }
 
-        return new Response(JSON.stringify({
-          ok: true,
-          status: "queued",
-          bytes: chunk.length,
-          totalBuffered: totalBytes
-        }), {
-          status: 200,
+        // 2. Refresh D1 Lexicon Context with 5-minute cache TTL
+        const nowMs = Date.now();
+        if (!this.d1Context || (nowMs - (this.d1ContextFetchedAt || 0)) > 300000) {
+          try {
+            const res = await this.env.DB.prepare("SELECT COALESCE(context_string, theological_context) AS context_string FROM context LIMIT 1").first();
+            this.d1Context = res ? (res.context_string || res.theological_context) : "Gospel, Christ, Bible";
+            this.d1ContextFetchedAt = nowMs;
+          } catch (e) {
+            if (!this.d1Context) this.d1Context = "Gospel, Christ, Bible";
+          }
+        }
+
+        // 3. Build optimized Whisper initial prompt
+        const baseTheology = "Calvary Baptist Church sermon: Gospel, Jesus Christ, Holy Spirit, Scripture, Faith, Grace, Salvation, King of Kings.";
+        const promptLexicon = this.d1Context ? ` ${this.d1Context}.` : "";
+        const historicalMemory = slidingContext ? ` Previous: ${slidingContext}` : "";
+        const fullInitialPrompt = `${baseTheology}${promptLexicon}${historicalMemory}`.slice(0, 800);
+
+        // 4. Run Whisper AI inference on clean WAV
+        const audioArray = Array.from(new Uint8Array(wavBuffer));
+        let response;
+        try {
+          response = await Promise.race([
+            this.env.AI.run("@cf/openai/whisper-large-v3-turbo", { audio: audioArray, initial_prompt: fullInitialPrompt }),
+            new Promise((_, reject) => setTimeout(() => reject(new Error("AI_TURBO_TIMEOUT")), 3500))
+          ]);
+        } catch (e1) {
+          try {
+            response = await this.env.AI.run("@cf/openai/whisper", { audio: audioArray, initial_prompt: fullInitialPrompt });
+          } catch (e2) {
+            console.error("Whisper inference error:", e1?.message, e2?.message);
+          }
+        }
+
+        if (response && response.text) {
+          const rawText = response.text.trim();
+          if (!isHallucinationOrProfane(rawText)) {
+            let captionText = formatCaption(rawText);
+            if (captionText.length > 0) {
+              this.lastTranscription = captionText;
+              this.lastTranscriptionTime = Date.now();
+
+              // 5. Broadcast transcript back to active WebSocket listeners (OBS & booth teleprompter)
+              this.broadcast({
+                type: "caption",
+                text: captionText,
+                timestamp: this.lastTranscriptionTime
+              });
+
+              // 6. Record to D1 if sermon archive recording is active
+              if (this.isRecordingArchive && this.currentSermonId) {
+                const elapsedMs = Math.max(0, this.lastTranscriptionTime - this.sermonMetadata.startTime);
+                this.sermonCaptions.push({ timestamp_ms: elapsedMs, text: captionText });
+                if (this.env.DB) {
+                  this.env.DB.prepare("INSERT INTO sermon_captions (tenant_id, sermon_id, timestamp_ms, text) VALUES (?, ?, ?, ?)")
+                    .bind(this.tenantId, this.currentSermonId, elapsedMs, captionText).run().catch(console.error);
+                }
+              }
+
+              return new Response(JSON.stringify({ ok: true, text: captionText }), {
+                headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
+              });
+            }
+          }
+        }
+
+        return new Response(JSON.stringify({ ok: true, text: "" }), {
           headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
         });
       } catch (err) {
@@ -926,72 +978,10 @@ export class CaptionDurableObject {
       return;
     }
 
-    // Audio stream message: ignore if in worship mode
-    if (this.currentMode === "worship") return;
 
-    if (message instanceof ArrayBuffer || message instanceof Uint8Array || ArrayBuffer.isView(message)) {
-      if (this.inactivityTimer) {
-        clearTimeout(this.inactivityTimer);
-        this.inactivityTimer = null;
-      }
-
-      this.audioChunks.push(new Uint8Array(message));
-      const totalBytes = this.audioChunks.reduce((sum, chunk) => sum + chunk.length, 0);
-
-      // Continuous speech chunk trigger
-      if (totalBytes >= MIN_CHUNK_BYTES && !this.isFlushing) {
-        await this.flushToWhisper();
-      } else if (totalBytes >= MIN_PAUSE_BYTES && !this.isFlushing) {
-        // Natural pause/breath debounce
-        this.inactivityTimer = setTimeout(async () => {
-          if (!this.isFlushing && this.audioChunks.length > 0) {
-            await this.flushToWhisper();
-          }
-        }, PAUSE_DEBOUNCE_MS);
-      }
-    }
   }
 
-  sliceChapter(elapsedMs, title, scriptureAnchor = null) {
-    if (!this.isRecordingArchive || !this.currentSermonId) return;
-
-    const prevIndex = this.currentChapterIndex;
-    const prevChapter = this.sermonChapters[this.sermonChapters.length - 1];
-    if (prevChapter) {
-      prevChapter.end_time_ms = elapsedMs;
-    }
-    if (this.env.DB) {
-      this.env.DB.prepare("UPDATE sermon_chapters SET end_time_ms = ? WHERE sermon_id = ? AND chapter_index = ?")
-        .bind(elapsedMs, this.currentSermonId, prevIndex).run().catch(console.error);
-    }
-
-    this.currentChapterIndex++;
-    this.currentChapterStartTimeMs = elapsedMs;
-    this.currentChapterTitle = title;
-    this.currentChapterAnchor = scriptureAnchor;
-
-    const newChapter = {
-      chapter_index: this.currentChapterIndex,
-      title,
-      start_time_ms: elapsedMs,
-      end_time_ms: null,
-      scripture_anchor: scriptureAnchor
-    };
-    this.sermonChapters.push(newChapter);
-
-    if (this.env.DB) {
-      this.env.DB.prepare("INSERT INTO sermon_chapters (tenant_id, sermon_id, chapter_index, title, start_time_ms, scripture_anchor) VALUES (?, ?, ?, ?, ?, ?)")
-        .bind(this.tenantId, this.currentSermonId, this.currentChapterIndex, title, elapsedMs, scriptureAnchor).run().catch(console.error);
-    }
-
-    this.broadcast({
-      type: "chapter_slice",
-      sermonId: this.currentSermonId,
-      chapter: newChapter
-    });
-  }
-
-  async synthesizeSermon(sermonId, metadata, captions, scriptures, chapters = [], tenantId = "calvary") {
+  async synthesizeSermon(sermonId, metadata, captions, scriptures = [], tenantId = "calvary") {
     try {
       const durationSec = Math.max(1, Math.round((Date.now() - metadata.startTime) / 1000));
       const fullText = captions.map(c => c.text).join(" ");
@@ -1005,7 +995,7 @@ export class CaptionDurableObject {
 
       if (wordCount >= 20) {
         try {
-          const prompt = `You are an assistant for ${tenantId === 'calvary' ? 'Calvary Baptist Church' : 'Christian Church Ministry'}. Summarize the following sermon in 2-3 sentences, and provide 3 key biblical takeaways as bullet points.\n\nSpeaker: ${metadata.speaker}\nTitle: ${metadata.title}\nScriptures: ${scriptures.join(", ") || "None specified"}\n\nTranscript:\n${fullText.slice(0, 7000)}\n\nFormat your response strictly as valid JSON with keys "summary" (string) and "key_points" (array of strings). Do NOT include code block markdown or any other text.`;
+          const prompt = `You are an assistant for ${tenantId === 'calvary' ? 'Calvary Baptist Church' : 'Christian Church Ministry'}. Summarize the following sermon in 2-3 sentences, and provide 3 key biblical takeaways as bullet points.\n\nSpeaker: ${metadata.speaker}\nTitle: ${metadata.title}\n\nTranscript:\n${fullText.slice(0, 7000)}\n\nFormat your response strictly as valid JSON with keys "summary" (string) and "key_points" (array of strings). Do NOT include code block markdown or any other text.`;
           
           const aiRes = await this.env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
             prompt,
@@ -1025,37 +1015,6 @@ export class CaptionDurableObject {
         } catch (aiErr) {
           console.error("AI Sermon Summary generation error:", aiErr);
         }
-
-        // LLaMA 3.1 Chapter Synthesis: Generate chapter-specific sub-summaries for scripture anchors & timeline slices
-        if (chapters && chapters.length > 0) {
-          for (let i = 0; i < chapters.length; i++) {
-            const ch = chapters[i];
-            const chStart = ch.start_time_ms || 0;
-            const chEnd = ch.end_time_ms || (durationSec * 1000);
-            const chCaptions = captions.filter(c => c.timestamp_ms >= chStart && c.timestamp_ms <= chEnd);
-            const chText = chCaptions.map(c => c.text).join(" ").trim();
-
-            if (chText.length >= 40) {
-              try {
-                const chPrompt = `Provide a concise 1-sentence summary of this sermon segment (${ch.title}${ch.scripture_anchor ? ' - ' + ch.scripture_anchor : ''}):\n\n"${chText.slice(0, 2000)}"\n\nReturn ONLY the single summary sentence, no quotes, no preamble.`;
-                const chAiRes = await this.env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
-                  prompt: chPrompt,
-                  max_tokens: 128
-                });
-                if (chAiRes && chAiRes.response) {
-                  const chSummary = chAiRes.response.trim().replace(/^["']|["']$/g, '');
-                  ch.summary = chSummary;
-                  if (this.env.DB) {
-                    await this.env.DB.prepare("UPDATE sermon_chapters SET summary = ? WHERE sermon_id = ? AND chapter_index = ?")
-                      .bind(chSummary, sermonId, ch.chapter_index).run().catch(console.error);
-                  }
-                }
-              } catch (chErr) {
-                console.error(`Chapter ${ch.chapter_index} AI summary error:`, chErr);
-              }
-            }
-          }
-        }
       }
 
       await this.env.DB.prepare(`
@@ -1073,8 +1032,6 @@ export class CaptionDurableObject {
         durationSeconds: durationSec,
         wordCount,
         wpm,
-        scriptures,
-        chapters,
         summary,
         keyPoints: JSON.parse(keyPointsJson)
       });
@@ -1086,211 +1043,7 @@ export class CaptionDurableObject {
   async webSocketClose(ws) {}
   async webSocketError(ws) {}
 
-  async flushToWhisper() {
-    if (this.audioChunks.length === 0 || this.isFlushing || this.currentMode === "worship") return;
 
-    this.isFlushing = true;
-
-    // ATOMIC INGESTION DRAIN: Detach current chunks so chunks arriving during AI inference are never dropped
-    const chunksToProcess = this.audioChunks;
-    this.audioChunks = [];
-
-    try {
-      const totalBytes = chunksToProcess.reduce((sum, chunk) => sum + chunk.length, 0);
-      if (totalBytes < 8000) {
-        return;
-      }
-
-      const pcmData = new Uint8Array(totalBytes);
-      let offset = 0;
-      for (const chunk of chunksToProcess) {
-        pcmData.set(chunk, offset);
-        offset += chunk.length;
-      }
-
-      // Calculate RMS energy and peak amplitude of the accumulated audio buffer
-      const int16View = new Int16Array(pcmData.buffer, pcmData.byteOffset, Math.floor(pcmData.byteLength / 2));
-      let sumSq = 0;
-      let maxAmp = 0;
-      for (let i = 0; i < int16View.length; i++) {
-        const val = int16View[i];
-        sumSq += val * val;
-        const abs = Math.abs(val);
-        if (abs > maxAmp) maxAmp = abs;
-      }
-      const rms = Math.sqrt(sumSq / int16View.length);
-
-      // SILENCE REJECTION GATE: If energy is below ambient room noise floor (speaker stopped talking), drop buffer and DO NOT call Whisper!
-      if (rms < 320 || maxAmp < 450) {
-        this.audioChunks = [];
-        this.isFlushing = false;
-        return;
-      }
-
-      // Dynamic peak gain normalization to boost soft speech to optimal Whisper volume (80% full scale)
-      if (maxAmp > 300 && maxAmp < 22000) {
-        const gain = Math.min(8.0, 22000 / maxAmp);
-        for (let i = 0; i < int16View.length; i++) {
-          int16View[i] = Math.max(-32768, Math.min(32767, Math.round(int16View[i] * gain)));
-        }
-      }
-
-      // Retain 500ms trailing acoustic overlap (16,000 bytes) for boundary continuity
-      const overlapBytes = Math.min(16000, pcmData.length);
-      const overlapChunk = pcmData.slice(pcmData.length - overlapBytes);
-      this.audioChunks = [overlapChunk];
-
-      // Prepend 200ms (6,400 bytes) of lead-in padding for clean phoneme attack
-      const leadInBytes = 6400;
-      const totalPcmBytes = leadInBytes + pcmData.length;
-
-      const wavBuffer = new Uint8Array(44 + totalPcmBytes);
-      const view = new DataView(wavBuffer.buffer);
-
-      view.setUint32(0, 0x52494646, false); // "RIFF"
-      view.setUint32(4, 36 + totalPcmBytes, true);
-      view.setUint32(8, 0x57415645, false); // "WAVE"
-      view.setUint32(12, 0x666d7420, false); // "fmt "
-      view.setUint32(16, 16, true);
-      view.setUint16(20, 1, true); // PCM
-      view.setUint16(22, 1, true); // Mono
-      view.setUint32(24, 16000, true); // 16kHz
-      view.setUint32(28, 32000, true); // Byte rate
-      view.setUint16(32, 2, true); // Block align
-      view.setUint16(34, 16, true); // 16-bit
-      view.setUint32(36, 0x64617461, false); // "data"
-      view.setUint32(40, totalPcmBytes, true);
-      wavBuffer.set(pcmData, 44 + leadInBytes);
-
-      const audioArray = Array.from(wavBuffer);
-
-      let response;
-      const turboTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error("AI_TURBO_TIMEOUT")), 1800));
-      const fallbackTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error("AI_FALLBACK_TIMEOUT")), 2500));
-
-      // Refresh D1 Lexicon Context with 5-minute cache TTL
-      const nowMs = Date.now();
-      if (!this.d1Context || (nowMs - (this.d1ContextFetchedAt || 0)) > 300000) {
-        try {
-          const res = await this.env.DB.prepare("SELECT COALESCE(context_string, theological_context) AS context_string FROM context LIMIT 1").first();
-          this.d1Context = res ? (res.context_string || res.theological_context) : "Gospel, Christ, Bible";
-          this.d1ContextFetchedAt = nowMs;
-        } catch (e) {
-          if (!this.d1Context) this.d1Context = "Gospel, Christ, Bible";
-        }
-      }
-
-      // Dynamic Context Biasing: D1 Lexicon + Scripture Hint + Trailing 200-char Continuity Seeding
-      const scriptureHint = this.getRecentScriptureHint();
-      const trailingContext = (this.lastTranscription || "").slice(-200).trim();
-      let aiPrompt = `Context: ${this.d1Context || "Gospel, Jesus Christ, Holy Spirit, Scripture, Faith, Grace, Salvation, King of Kings"}.`;
-      if (scriptureHint) {
-        aiPrompt += ` Scripture: ${scriptureHint}.`;
-      }
-      if (trailingContext) {
-        aiPrompt += ` Previous: ${trailingContext}`;
-      }
-
-      try {
-        // Primary Edge Inference: Large V3 Turbo with 1800ms Latency Circuit Breaker
-        response = await Promise.race([
-          this.env.AI.run("@cf/openai/whisper-large-v3-turbo", { audio: audioArray, initial_prompt: aiPrompt }),
-          turboTimeout
-        ]);
-      } catch (e1) {
-        // Circuit Breaker Tripped: Fallback to base model with strict 2500ms boundary
-        try {
-          response = await Promise.race([
-            this.env.AI.run("@cf/openai/whisper", { audio: audioArray, initial_prompt: aiPrompt }),
-            fallbackTimeout
-          ]);
-        } catch (e2) {
-          console.warn("Dual Whisper edge circuit breaker tripped:", e1?.message, e2?.message);
-          // Preserve un-transcribed audio chunk in the front of queue so speech is not lost
-          if (this.audioChunks.length < 3) {
-            this.audioChunks.unshift(pcmData);
-          }
-        }
-      }
-
-      if (response && response.text) {
-        const rawText = response.text.trim();
-        if (!isHallucinationOrProfane(rawText)) {
-          let captionText = formatCaption(rawText);
-
-          if (captionText.length > 0) {
-            this.lastTranscription = captionText;
-            this.lastTranscriptionTime = Date.now();
-            this.broadcast({
-              type: "caption",
-              text: captionText,
-              timestamp: this.lastTranscriptionTime
-            });
-
-            // If Sermon Archive is actively recording, slice transcript and persist to D1
-            if (this.isRecordingArchive && this.currentSermonId) {
-              const elapsedMs = Math.max(0, this.lastTranscriptionTime - this.sermonMetadata.startTime);
-
-              // 1. Record Caption in memory and D1 (tenant-isolated)
-              this.sermonCaptions.push({ timestamp_ms: elapsedMs, text: captionText });
-              if (this.env.DB) {
-                this.env.DB.prepare("INSERT INTO sermon_captions (tenant_id, sermon_id, timestamp_ms, text) VALUES (?, ?, ?, ?)")
-                  .bind(this.tenantId, this.currentSermonId, elapsedMs, captionText).run().catch(console.error);
-              }
-
-              // 2. Scripture Reference Detection & Chapter Anchor Slicing
-              let match;
-              const detectRegex = new RegExp(DETECT_SCRIPTURE_PATTERN.source, 'gi');
-              while ((match = detectRegex.exec(captionText)) !== null) {
-                const fullRef = match[0];
-                const book = match[1];
-                const chapterNum = parseInt(match[2], 10);
-                const verseNum = parseInt(match[3], 10);
-
-                // Add to recent scripture focus for prompt biasing
-                if (!this.recentScriptures) this.recentScriptures = [];
-                this.recentScriptures.push({ ref: fullRef, timestamp: Date.now() });
-
-                if (!this.scripturesDetected.has(fullRef)) {
-                  this.scripturesDetected.set(fullRef, elapsedMs);
-                  if (this.env.DB) {
-                    this.env.DB.prepare("INSERT INTO sermon_scriptures (tenant_id, sermon_id, reference, book, chapter, verse, detected_at_ms) VALUES (?, ?, ?, ?, ?, ?, ?)")
-                      .bind(this.tenantId, this.currentSermonId, fullRef, book, chapterNum, verseNum, elapsedMs).run().catch(console.error);
-                  }
-                  this.broadcast({
-                    type: "scripture_detected",
-                    tenantId: this.tenantId,
-                    sermonId: this.currentSermonId,
-                    reference: fullRef,
-                    timestamp_ms: elapsedMs
-                  });
-
-                  // Scripture Chapter Slicing: Trigger new chapter anchor if at least 2 mins (120,000ms) since last chapter started
-                  if ((elapsedMs - this.currentChapterStartTimeMs) >= 120000) {
-                    this.sliceChapter(elapsedMs, `Scripture: ${fullRef}`, fullRef);
-                  }
-                }
-              }
-
-              // 3. Temporal Chapter Slicing (5-minute intervals = 300,000ms)
-              if ((elapsedMs - this.currentChapterStartTimeMs) >= 300000) {
-                const minutesMark = Math.floor(elapsedMs / 60000);
-                this.sliceChapter(elapsedMs, `Message - Part ${this.currentChapterIndex + 1} (${minutesMark}m mark)`, null);
-              }
-            }
-          }
-        }
-      }
-    } catch (err) {
-      console.error("Whisper Error:", err);
-    } finally {
-      this.isFlushing = false;
-      const remainingBytes = this.audioChunks.reduce((sum, chunk) => sum + chunk.length, 0);
-      if (remainingBytes >= MIN_CHUNK_BYTES) {
-        this.flushToWhisper();
-      }
-    }
-  }
 }
 
 const CSP_POLICY = "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https:; connect-src 'self' wss: ws: https: blob: https://*.cloudflareinsights.com https://spokenlight.dondlingergc.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https: blob: https://static.cloudflareinsights.com https://spokenlight.dondlingergc.com; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https: blob:; media-src 'self' blob:; font-src 'self' data: https:;";
