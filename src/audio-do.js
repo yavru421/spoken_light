@@ -1361,10 +1361,10 @@ export default {
         let summary = "Sermon transcript recorded and archived.";
         let keyPointsJson = "[]";
 
-        // 2. Synthesize overall sermon summary with Workers AI if transcript has sufficient content
+        // 2. Synthesize overall sermon summary and extract scriptures with Workers AI
         if (wordCount >= 20 && env.AI) {
           try {
-            const prompt = `You are an assistant for ${tenantId === 'calvary' ? 'Calvary Baptist Church' : 'Christian Church Ministry'}. Summarize the following sermon in 2-3 sentences, and provide 3 key biblical takeaways as bullet points.\n\nSpeaker: ${speaker}\nTitle: ${title}\nScriptures: ${scriptures.join(", ") || "None specified"}\n\nTranscript:\n${captionsText.slice(0, 7000)}\n\nFormat your response strictly as valid JSON with keys "summary" (string) and "key_points" (array of strings). Do NOT include code block markdown or any other text.`;
+            const prompt = `You are an assistant for ${tenantId === 'calvary' ? 'Calvary Baptist Church' : 'Christian Church Ministry'}. Summarize the following sermon in 2-3 sentences, provide 3 key biblical takeaways as bullet points, and extract all biblical scriptures or passages referenced or read (e.g. "James 3:1-12", "James 1:27", "1 Kings 20:11", "Matthew 18:6").\n\nSpeaker: ${speaker}\nTitle: ${title}\n\nTranscript:\n${captionsText.slice(0, 7000)}\n\nFormat your response strictly as valid JSON with keys "summary" (string), "key_points" (array of strings), and "scriptures" (array of strings, e.g. ["James 3:1-12", "James 1:27"]). Do NOT include code block markdown or any other text.`;
 
             const aiRes = await env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
               prompt,
@@ -1377,6 +1377,21 @@ export default {
                 const parsed = JSON.parse(cleaned);
                 if (parsed.summary) summary = parsed.summary;
                 if (Array.isArray(parsed.key_points)) keyPointsJson = JSON.stringify(parsed.key_points);
+                if (Array.isArray(parsed.scriptures) && env.DB) {
+                  for (const ref of parsed.scriptures) {
+                    if (!ref || typeof ref !== 'string') continue;
+                    const cleanRef = ref.trim();
+                    if (!cleanRef) continue;
+                    const m = cleanRef.match(/^([1-3]?\s*[A-Za-z]+(?:\s+[A-Za-z]+)?)\s+(\d+)(?::(\d+))?/);
+                    const book = m ? m[1].trim() : cleanRef;
+                    const chapterNum = m && m[2] ? parseInt(m[2], 10) : null;
+                    const verseNum = m && m[3] ? parseInt(m[3], 10) : null;
+                    await env.DB.prepare(`
+                      INSERT INTO sermon_scriptures (tenant_id, sermon_id, reference, book, chapter, verse, detected_at_ms)
+                      VALUES (?, ?, ?, ?, ?, ?, 0)
+                    `).bind(tenantId, sermonId, cleanRef, book, chapterNum, verseNum).run().catch(console.error);
+                  }
+                }
               } catch {
                 summary = aiRes.response.slice(0, 500);
               }
