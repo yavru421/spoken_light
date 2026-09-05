@@ -25,3 +25,15 @@ binding = "AI"
 binding = "DB"
 database_name = "spoken_light_lexicon"
 database_id = "e96a4638-add4-43a6-8a3e-e1764b1feef5"
+
+[[queues.producers]]
+queue = "spoken-light-sermon-queue"
+binding = "SERMON_QUEUE"
+
+[[queues.consumers]]
+queue = "spoken-light-sermon-queue"
+max_batch_size = 1
+max_batch_timeout = 2
+max_retries = 3
+dead_letter_queue = "spoken-light-sermon-dlq"
+

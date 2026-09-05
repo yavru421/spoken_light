@@ -75,6 +75,28 @@ function isHallucinationOrProfane(text) {
   return false;
 }
 
+function isSingingOrMusic(text) {
+  if (!text) return false;
+  const clean = text.trim();
+  if (clean.length === 0) return false;
+  const lower = clean.toLowerCase();
+
+  // 1. Musical notes and symbols emitted by Whisper during audio playback
+  if (/[♪♫♬♩]/.test(clean)) return true;
+
+  // 2. Whisper descriptive musical/choral brackets
+  if (/\b(singing|choir|vocalizing|humming|music playing|background music|organ music|gospel music|piano music)\b/i.test(clean)) return true;
+  if (/^[\(\[\{].*?(music|singing|song|choir|melody|hymn).*?[\)\]\}]$/i.test(clean)) return true;
+
+  // 3. Repeated lyric syllables or repetitive worship loops (e.g. "la la la", "hallelujah hallelujah", "holy holy holy")
+  if (/\b(la|na|ooh|aah|whoa|yeah|amen|hallelujah|holy|glory|praise|worthy|reign|hosanna)(?:\s+\1){2,}\b/i.test(lower)) return true;
+
+  // 4. Any 1-4 word lyric phrase repeated 3+ times consecutively (classic Whisper singing beam search loop)
+  if (/\b([a-zA-Z0-9']+(?:\s+[a-zA-Z0-9']+){0,3})(?:\s+\1){2,}\b/i.test(lower)) return true;
+
+  return false;
+}
+
 const BIBLICAL_REPLACEMENTS = [
   // Names of God, Christ & The Trinity
   [/\bjesus christ\b/gi, "Jesus Christ"],
@@ -178,7 +200,52 @@ const BIBLICAL_REPLACEMENTS = [
   [/\bnew testament\b/gi, "New Testament"],
   [/\bthe altar\b/gi, "the altar"],
   [/\bthe altars\b/gi, "the altars"],
-  [/\baltar call\b/gi, "altar call"]
+  [/\baltar call\b/gi, "altar call"],
+
+  // Pastor Tim to Pastor J correction
+  [/\bpastor tim\b/gi, "Pastor J"],
+
+  // Acoustic & Homophone Corrections from Live Preaching
+  [/\bsmall time\b/gi, "small tongue"],
+  [/\bthe topic of the time\b/gi, "the topic of the tongue"],
+  [/\bsmall memory\b/gi, "small member"],
+  [/\bhe's pulling\s+perfect\b/gi, "he is a perfect man"],
+  [/\bbrighten his own body\b/gi, "bridle his whole body"],
+  [/\bbridal(?:ist)?\b/gi, "bridle"],
+  [/\bthe bear or supply\b/gi, "the course of life"],
+  [/\bfull of delusion\b/gi, "full of deadly poison"],
+  [/\bblessing and nursing\b/gi, "blessing and cursing"],
+  [/\bcan't affect my brother's marriage\b/gi, "can a fig tree, my brothers, bear olives"],
+  [/\bAll ads are a great find\b/gi, "or a grapevine produce figs"],
+  [/\bNeither can assault on you\b/gi, "neither can salt water produce"],
+  [/\bminister to our Son\b/gi, "minister to our soul"],
+  [/\bviral world\b/gi, "fire, a world"],
+  [/\bJames\s+119\b/gi, "James 1:19"],
+  [/\bJames\s+7:6\b/gi, "James 1:6"],
+
+  // Preaching Homophones & Speech Slips from Pastor J Test Run
+  [/\bthe tumor feels\b/gi, "the tongue reveals"],
+  [/\btumor feels\b/gi, "tongue reveals"],
+  [/\bthe temper reveals\b/gi, "the tongue reveals"],
+  [/\btemper reveals\b/gi, "tongue reveals"],
+  [/\btransform the tone\b/gi, "transform the tongue"],
+  [/\btalk about the time\b/gi, "talk about the tongue"],
+  [/\bfood teach\b/gi, "who teach"],
+  [/\bpretty much a literate\b/gi, "pretty much illiterate"],
+  [/\bMatthew\s+(?:and\s+teen|18)\b/gi, "Matthew 18"],
+  [/\bverse 60\b/gi, "verse 6"],
+  [/\bgreat no stone\b/gi, "great millstone"],
+  [/\bthrown into the dead[\s\.\,]+next at the sea\b/gi, "drowned in the depth of the sea"],
+  [/\bdo let us pray\b/gi, "be led astray"],
+
+  // James Preaching Homophones: "God doesn't demand perfection, He demands progress"
+  [/\bGod doesn't demand profession\b/gi, "God doesn't demand perfection, He demands progress"],
+  [/\bGod doesn't demand perfection(?:,)? he demands\b/gi, "God doesn't demand perfection, He demands progress"],
+  [/\bthe tongue reveals\b/gi, "the tongue reveals"],
+  [/\btongue reveals\b/gi, "tongue reveals"],
+  [/\bdemand profession\b/gi, "demand perfection"],
+  [/\bdemands profession\b/gi, "demands perfection"],
+  [/\bdemand perfect[\s\.\,]+(?:I appreciate\s+)?he demands\b/gi, "demand perfection; He demands"]
 ];
 
 // Matches spoken variations (e.g. "John chapter 3 verse 16" or "Romans 8 28") and normalizes them to "John 3:16"
@@ -199,6 +266,9 @@ function formatCaption(text) {
 
   // Convert spoken scripture variations (e.g. "John chapter 3 verse 16" or "Romans 8 28") -> "John 3:16"
   clean = clean.replace(SPOKEN_SCRIPTURE_PATTERN, "$1 $2:$3");
+
+  // Convert 3-digit unspaced spoken scriptures (e.g. "James 119" -> "James 1:19", "John 316" -> "John 3:16")
+  clean = clean.replace(/\b(Genesis|Exodus|Leviticus|Numbers|Deuteronomy|Joshua|Judges|Ruth|1\s+Samuel|2\s+Samuel|1\s+Kings|2\s+Kings|1\s+Chronicles|2\s+Chronicles|Ezra|Nehemiah|Esther|Job|Psalms|Psalm|Proverbs|Ecclesiastes|Song\s+of\s+Solomon|Isaiah|Jeremiah|Lamentations|Ezekiel|Daniel|Hosea|Joel|Amos|Obadiah|Jonah|Micah|Nahum|Habakkuk|Zephaniah|Haggai|Zechariah|Malachi|Matthew|Mark|Luke|John|Acts|Romans|1\s+Corinthians|2\s+Corinthians|Galatians|Ephesians|Philippians|Colossians|1\s+Thessalonians|2\s+Thessalonians|1\s+Timothy|2\s+Timothy|Titus|Philemon|Hebrews|James|1\s+Peter|2\s+Peter|1\s+John|2\s+John|3\s+John|Jude|Revelation)\s+(\d)(\d{2})\b/gi, "$1 $2:$3");
 
   clean = clean.charAt(0).toUpperCase() + clean.slice(1);
   if (clean.endsWith(',')) clean = clean.slice(0, -1);
@@ -318,6 +388,8 @@ export class CaptionDurableObject {
     this.isFlushing = false;
     this.inactivityTimer = null;
     this.currentMode = "sermon"; // "sermon" or "worship"
+    this.singingStreak = 0;
+    this.autoWorshipMuted = false;
     this.isRecordingArchive = false;
     this.currentSermonId = null;
     this.tenantId = "calvary";
@@ -353,7 +425,12 @@ export class CaptionDurableObject {
       const idleMs = Date.now() - this.lastAudioActivityTime;
       if (idleMs >= 14 * 60 * 1000) {
         console.log(`[ALARM] Auto-finalizing abandoned sermon recording: ${this.currentSermonId}`);
-        await this.finalizeActiveSermon();
+        const sermonId = this.currentSermonId;
+        const metadata = { ...this.sermonMetadata };
+        const scriptures = Array.from(this.scripturesDetected.keys());
+        const durationSec = Math.max(1, Math.round((Date.now() - (metadata.startTime || Date.now())) / 1000));
+        const chapters = [...this.sermonChapters];
+        await this.enqueueSermonArchive(sermonId, metadata, durationSec, scriptures, chapters);
       } else {
         // Reschedule alarm for remaining idle window
         await this.state.storage.setAlarm(this.lastAudioActivityTime + 15 * 60 * 1000);
@@ -361,38 +438,79 @@ export class CaptionDurableObject {
     }
   }
 
-  async finalizeActiveSermon() {
-    if (!this.isRecordingArchive || !this.currentSermonId) return;
-
-    const sermonId = this.currentSermonId;
-    const metadata = { ...this.sermonMetadata };
+  async enqueueSermonArchive(sermonId, metadata, durationSec, scriptures, chapters) {
+    if (!sermonId) sermonId = this.currentSermonId;
+    if (!metadata) metadata = { ...this.sermonMetadata };
+    if (durationSec === undefined || durationSec === null) {
+      durationSec = Math.max(1, Math.round((Date.now() - (metadata.startTime || Date.now())) / 1000));
+    }
+    if (!scriptures) scriptures = Array.from(this.scripturesDetected.keys());
+    if (!chapters) chapters = [...this.sermonChapters];
     const captions = [...this.sermonCaptions];
-    const scriptures = Array.from(this.scripturesDetected.keys());
-    const durationSec = Math.max(1, Math.round((Date.now() - metadata.startTime) / 1000));
     const finalElapsedMs = durationSec * 1000;
 
-    const lastChapter = this.sermonChapters[this.sermonChapters.length - 1];
+    // Finalize the active chapter (set end_time_ms = durationSec * 1000 in memory and D1)
+    const lastChapter = chapters[chapters.length - 1];
     if (lastChapter) {
       lastChapter.end_time_ms = finalElapsedMs;
     }
     if (this.env.DB) {
-      this.env.DB.prepare("UPDATE sermon_chapters SET end_time_ms = ? WHERE sermon_id = ? AND chapter_index = ?")
+      await this.env.DB.prepare("UPDATE sermon_chapters SET end_time_ms = ? WHERE sermon_id = ? AND chapter_index = ?")
         .bind(finalElapsedMs, sermonId, this.currentChapterIndex).run().catch(console.error);
     }
 
-    const chapters = [...this.sermonChapters];
-
+    // Set this.isRecordingArchive = false; this.currentSermonId = null;
     this.isRecordingArchive = false;
     this.currentSermonId = null;
 
+    // Broadcast archive_status with status: 'queued'
     this.broadcast({
       type: "archive_status",
       isRecording: false,
-      status: "processing",
+      status: "queued",
       sermonId
     });
 
-    await this.synthesizeSermon(sermonId, metadata, captions, scriptures, chapters, this.tenantId);
+    // Update D1 sermons SET status = 'queued', updated_at = CURRENT_TIMESTAMP WHERE id = ?
+    if (this.env.DB) {
+      await this.env.DB.prepare("UPDATE sermons SET status = 'queued', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+        .bind(sermonId).run().catch(console.error);
+    }
+
+    // Enqueue message to env.SERMON_QUEUE.send({ sermonId, tenantId: this.tenantId, speaker: metadata.speaker, title: metadata.title, startTime: metadata.startTime, durationSec, scriptures, chapters, action: 'synthesize_sermon', enqueuedAt: Date.now() })
+    const queuePayload = {
+      sermonId,
+      tenantId: this.tenantId,
+      speaker: metadata.speaker,
+      title: metadata.title,
+      startTime: metadata.startTime,
+      durationSec,
+      scriptures,
+      chapters,
+      action: "synthesize_sermon",
+      enqueuedAt: Date.now()
+    };
+
+    if (this.env.SERMON_QUEUE) {
+      try {
+        await this.env.SERMON_QUEUE.send(queuePayload);
+      } catch (qErr) {
+        console.error("Failed to enqueue sermon to SERMON_QUEUE, falling back to inline synthesis:", qErr);
+        await this.synthesizeSermon(sermonId, metadata, captions, scriptures, chapters, this.tenantId);
+      }
+    } else {
+      await this.synthesizeSermon(sermonId, metadata, captions, scriptures, chapters, this.tenantId);
+    }
+  }
+
+  async finalizeActiveSermon() {
+    if (!this.isRecordingArchive || !this.currentSermonId) return;
+    const sermonId = this.currentSermonId;
+    const metadata = { ...this.sermonMetadata };
+    const scriptures = Array.from(this.scripturesDetected.keys());
+    const durationSec = Math.max(1, Math.round((Date.now() - (metadata.startTime || Date.now())) / 1000));
+    const chapters = [...this.sermonChapters];
+    await this.enqueueSermonArchive(sermonId, metadata, durationSec, scriptures, chapters);
   }
 
   async fetch(request) {
@@ -459,7 +577,7 @@ export class CaptionDurableObject {
         try { body = await request.json(); } catch(e) {}
         const sermonId = "sermon_" + Date.now();
         const title = (body.title && body.title.trim()) || "Sunday Morning Service";
-        const speaker = (body.speaker && body.speaker.trim()) || "Pastor";
+        const speaker = (body.speaker && body.speaker.trim()) || "Pastor J";
         const tenant = (body.tenant_id && body.tenant_id.trim()) || this.tenantId || "calvary";
         this.tenantId = tenant;
         const nowIso = new Date().toISOString().slice(0, 10);
@@ -523,9 +641,14 @@ export class CaptionDurableObject {
       }
 
       const sermonId = this.currentSermonId;
-      await this.finalizeActiveSermon();
+      const metadata = { ...this.sermonMetadata };
+      const scriptures = Array.from(this.scripturesDetected.keys());
+      const durationSec = Math.max(1, Math.round((Date.now() - (metadata.startTime || Date.now())) / 1000));
+      const chapters = [...this.sermonChapters];
 
-      return new Response(JSON.stringify({ success: true, sermonId, status: "processing" }), {
+      await this.enqueueSermonArchive(sermonId, metadata, durationSec, scriptures, chapters);
+
+      return new Response(JSON.stringify({ success: true, sermonId, status: "queued" }), {
         headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
       });
     }
@@ -752,12 +875,13 @@ export class CaptionDurableObject {
         }
 
         // 3. Build optimized Whisper initial prompt with dynamic scripture biasing
-        const baseTheology = "Calvary Baptist Church sermon: Gospel, Jesus Christ, Holy Spirit, Scripture, Faith, Grace, Salvation, King of Kings.";
+        const baseTheology = "Calvary Baptist Church sermon by Pastor J: Holy Bible, Scripture, Gospel, Jesus Christ, Holy Spirit, Faith, Grace, Salvation, King of Kings, Old Testament, New Testament, Epistle of James, tongue, bridle, righteousness, grapevine, fig tree, chapter, verse.";
+        const homophoneBiasing = " God doesn't demand perfection, He demands progress; the tongue reveals the heart; bridle the whole body; transform the tongue; Matthew 18:6 millstone; James 1:19.";
         const scriptureHint = this.getRecentScriptureHint();
         const promptScripture = scriptureHint ? ` Scripture: ${scriptureHint}.` : "";
         const promptLexicon = this.d1Context ? ` ${this.d1Context}.` : "";
         const historicalMemory = slidingContext ? ` Previous: ${slidingContext}` : "";
-        const fullInitialPrompt = `${baseTheology}${promptScripture}${promptLexicon}${historicalMemory}`.slice(0, 800);
+        const fullInitialPrompt = `${baseTheology}${homophoneBiasing}${promptScripture}${promptLexicon}${historicalMemory}`.slice(0, 800);
 
         // 4. Run Whisper AI inference on clean WAV
         const audioArray = Array.from(new Uint8Array(wavBuffer));
@@ -777,6 +901,49 @@ export class CaptionDurableObject {
 
         if (response && response.text) {
           const rawText = response.text.trim();
+
+          // Auto-Worship / Congregational Singing Guard
+          const isSinging = isSingingOrMusic(rawText);
+          if (isSinging) {
+            this.singingStreak++;
+            if (!this.autoWorshipMuted) {
+              this.autoWorshipMuted = true;
+              this.broadcast({
+                type: "auto_worship",
+                isMuted: true,
+                reason: "singing_detected",
+                text: "🎵 Congregational singing detected — subtitles auto-muted"
+              });
+              this.broadcast({ type: "clear", reason: "auto_worship_detected" });
+            }
+            return new Response(JSON.stringify({ ok: true, text: "", auto_muted: true }), {
+              headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
+            });
+          } else if (this.autoWorshipMuted) {
+            // Check if clean preaching speech has resumed (at least 3 words, not music)
+            const wordCount = rawText.split(/\s+/).filter(Boolean).length;
+            if (wordCount >= 3 && !isHallucinationOrProfane(rawText)) {
+              this.singingStreak = 0;
+              this.autoWorshipMuted = false;
+              this.broadcast({
+                type: "auto_worship",
+                isMuted: false,
+                reason: "speech_resumed"
+              });
+            } else {
+              // Still in singing recovery window; drop chunk
+              return new Response(JSON.stringify({ ok: true, text: "", auto_muted: true }), {
+                headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
+              });
+            }
+          }
+
+          if (this.currentMode === "worship") {
+            return new Response(JSON.stringify({ ok: true, text: "", mode: "worship" }), {
+              headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
+            });
+          }
+
           if (!isHallucinationOrProfane(rawText)) {
             let captionText = formatCaption(rawText);
             if (captionText.length > 0) {
@@ -858,6 +1025,21 @@ export class CaptionDurableObject {
       }
     }
 
+    if (url.pathname === "/internal/notify-archive-completed" && request.method === "POST") {
+      try {
+        const payload = await request.json();
+        this.broadcast({
+          type: "archive_completed",
+          ...payload
+        });
+        return new Response(JSON.stringify({ ok: true }), {
+          headers: { "Content-Type": "application/json" }
+        });
+      } catch (err) {
+        return new Response(JSON.stringify({ ok: false, error: err.message }), { status: 500 });
+      }
+    }
+
     return new Response("Spoken Light Edge DO", { status: 200 });
   }
 
@@ -880,6 +1062,8 @@ export class CaptionDurableObject {
         const cmd = JSON.parse(message);
         if (cmd.type === "set_mode") {
           this.currentMode = cmd.mode === "worship" ? "worship" : "sermon";
+          this.autoWorshipMuted = false;
+          this.singingStreak = 0;
           if (this.currentMode === "worship") {
             this.audioChunks = [];
             this.lastTranscription = "";
@@ -919,8 +1103,13 @@ export class CaptionDurableObject {
           }
           const sermonId = "sermon_" + Date.now();
           const title = (cmd.title && cmd.title.trim()) || "Sunday Morning Service";
-          const speaker = (cmd.speaker && cmd.speaker.trim()) || "Pastor";
+          const speaker = (cmd.speaker && cmd.speaker.trim()) || "Pastor J";
           const nowIso = new Date().toISOString().slice(0, 10);
+
+          // Deduplicate if already started via HTTP start within 10 seconds
+          if (this.isRecordingArchive && this.currentSermonId && (Date.now() - (this.sermonMetadata.startTime || 0)) < 10000) {
+            return;
+          }
 
           this.isRecordingArchive = true;
           this.currentSermonId = sermonId;
@@ -979,36 +1168,11 @@ export class CaptionDurableObject {
 
           const sermonId = this.currentSermonId;
           const metadata = { ...this.sermonMetadata };
-          const captions = [...this.sermonCaptions];
           const scriptures = Array.from(this.scripturesDetected.keys());
-          
-          const durationSec = Math.max(1, Math.round((Date.now() - metadata.startTime) / 1000));
-          const finalElapsedMs = durationSec * 1000;
-
-          // Finalize active chapter
-          const lastChapter = this.sermonChapters[this.sermonChapters.length - 1];
-          if (lastChapter) {
-            lastChapter.end_time_ms = finalElapsedMs;
-          }
-          if (this.env.DB) {
-            this.env.DB.prepare("UPDATE sermon_chapters SET end_time_ms = ? WHERE sermon_id = ? AND chapter_index = ?")
-              .bind(finalElapsedMs, sermonId, this.currentChapterIndex).run().catch(console.error);
-          }
-
+          const durationSec = Math.max(1, Math.round((Date.now() - (metadata.startTime || Date.now())) / 1000));
           const chapters = [...this.sermonChapters];
 
-          this.isRecordingArchive = false;
-          this.currentSermonId = null;
-
-          this.broadcast({
-            type: "archive_status",
-            isRecording: false,
-            status: "processing",
-            sermonId
-          });
-
-          // Run synthesis in background with explicit tenant isolation
-          this.synthesizeSermon(sermonId, metadata, captions, scriptures, chapters, this.tenantId);
+          await this.enqueueSermonArchive(sermonId, metadata, durationSec, scriptures, chapters);
           return;
         }
 
@@ -1158,6 +1322,204 @@ function sanitizeResponseHeaders(response) {
 }
 
 export default {
+  async queue(batch, env, ctx) {
+    for (const message of batch.messages) {
+      const item = message.body || {};
+      const {
+        sermonId,
+        tenantId = "calvary",
+        speaker = "Pastor",
+        title = "Sunday Sermon",
+        startTime,
+        durationSec = 0,
+        scriptures = [],
+        chapters = []
+      } = item;
+
+      if (!sermonId) {
+        message.ack();
+        continue;
+      }
+
+      try {
+        // 1. Fetch transcript from D1 (sermon_captions)
+        let captionsRows = [];
+        if (env.DB) {
+          const rows = await env.DB.prepare("SELECT timestamp_ms, text FROM sermon_captions WHERE sermon_id = ? ORDER BY timestamp_ms ASC")
+            .bind(sermonId).all();
+          if (rows && rows.results) {
+            captionsRows = rows.results;
+          }
+        }
+
+        const captionsText = captionsRows.map(r => r.text).join(" ");
+        const words = captionsText.split(/\s+/).filter(Boolean);
+        const wordCount = words.length;
+        const activeMinutes = Math.max(0.1, durationSec / 60);
+        const wpm = Math.round(wordCount / activeMinutes);
+
+        let summary = "Sermon transcript recorded and archived.";
+        let keyPointsJson = "[]";
+
+        // 2. Synthesize overall sermon summary with Workers AI if transcript has sufficient content
+        if (wordCount >= 20 && env.AI) {
+          try {
+            const prompt = `You are an assistant for ${tenantId === 'calvary' ? 'Calvary Baptist Church' : 'Christian Church Ministry'}. Summarize the following sermon in 2-3 sentences, and provide 3 key biblical takeaways as bullet points.\n\nSpeaker: ${speaker}\nTitle: ${title}\nScriptures: ${scriptures.join(", ") || "None specified"}\n\nTranscript:\n${captionsText.slice(0, 7000)}\n\nFormat your response strictly as valid JSON with keys "summary" (string) and "key_points" (array of strings). Do NOT include code block markdown or any other text.`;
+
+            const aiRes = await env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
+              prompt,
+              max_tokens: 512
+            });
+
+            if (aiRes && aiRes.response) {
+              const cleaned = aiRes.response.trim().replace(/^```json\s*/i, '').replace(/\s*```$/i, '').trim();
+              try {
+                const parsed = JSON.parse(cleaned);
+                if (parsed.summary) summary = parsed.summary;
+                if (Array.isArray(parsed.key_points)) keyPointsJson = JSON.stringify(parsed.key_points);
+              } catch {
+                summary = aiRes.response.slice(0, 500);
+              }
+            }
+          } catch (aiErr) {
+            console.error("Queue Workers AI synthesis error:", aiErr);
+          }
+        }
+
+        // 3. Chapter-Level Pastoral Study Notes Synthesis
+        let chapterList = chapters;
+        if (env.DB) {
+          try {
+            const chRes = await env.DB.prepare("SELECT chapter_index, title, start_time_ms, end_time_ms, scripture_anchor, summary FROM sermon_chapters WHERE sermon_id = ? ORDER BY chapter_index ASC")
+              .bind(sermonId).all();
+            if (chRes && chRes.results && chRes.results.length > 0) {
+              chapterList = chRes.results;
+            }
+          } catch (chFetchErr) {
+            console.error("Error fetching sermon chapters from D1:", chFetchErr);
+          }
+        }
+
+        if (chapterList && chapterList.length > 0 && env.AI && env.DB) {
+          for (const ch of chapterList) {
+            const startMs = ch.start_time_ms || 0;
+            const endMs = (ch.end_time_ms !== null && ch.end_time_ms !== undefined) ? ch.end_time_ms : (durationSec * 1000 || Infinity);
+            const chCaptions = captionsRows.filter(c => c.timestamp_ms >= startMs && c.timestamp_ms <= endMs);
+            const chText = chCaptions.map(c => c.text).join(" ");
+            const chWords = chText.split(/\s+/).filter(Boolean);
+
+            if (chWords.length >= 15) {
+              try {
+                const chPrompt = `You are a pastoral study assistant for ${tenantId === 'calvary' ? 'Calvary Baptist Church' : 'Christian Church Ministry'}.
+Write a concise 1-sentence biblical/pastoral anchor summary for this sermon chapter segment.
+
+Chapter Title: ${ch.title}
+${ch.scripture_anchor ? `Scripture Anchor: ${ch.scripture_anchor}\n` : ''}Transcript:
+${chText.slice(0, 3000)}
+
+Respond with ONLY the 1-sentence summary, no quotes, no markdown, no filler.`;
+
+                const aiRes = await env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
+                  prompt: chPrompt,
+                  max_tokens: 120
+                });
+
+                if (aiRes && aiRes.response) {
+                  const chSummary = aiRes.response.trim().replace(/^["']|["']$/g, '');
+                  await env.DB.prepare("UPDATE sermon_chapters SET summary = ? WHERE sermon_id = ? AND chapter_index = ?")
+                    .bind(chSummary, sermonId, ch.chapter_index).run();
+                  ch.summary = chSummary;
+                }
+              } catch (chAiErr) {
+                console.error(`Chapter ${ch.chapter_index} AI summary error:`, chAiErr);
+              }
+            }
+          }
+        }
+
+        // 4. Persist to D1
+        if (env.DB) {
+          await env.DB.prepare(`
+            UPDATE sermons
+            SET summary = ?, key_points = ?, duration_seconds = ?, word_count = ?, wpm = ?, status = 'archived', updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+          `).bind(summary, keyPointsJson, durationSec, wordCount, wpm, sermonId).run();
+        }
+
+        // 5. Notify live DO room so connected booth/overlay clients receive real-time completion
+        if (env.CAPTION_DO) {
+          try {
+            const doRoomName = `tenant_${tenantId}`;
+            const id = env.CAPTION_DO.idFromName(doRoomName);
+            const stub = env.CAPTION_DO.get(id);
+            await stub.fetch(new Request("http://internal/internal/notify-archive-completed", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                tenantId,
+                sermonId,
+                status: "archived",
+                title,
+                speaker,
+                durationSeconds: durationSec,
+                wordCount,
+                wpm,
+                scriptures,
+                chapters: chapterList,
+                summary,
+                keyPoints: JSON.parse(keyPointsJson)
+              })
+            }));
+          } catch (notifErr) {
+            console.error("Error notifying DO of archive completion:", notifErr);
+          }
+        }
+
+        message.ack();
+      } catch (err) {
+        console.error("Queue message processing failure:", err);
+        const attempts = message.attempts || 1;
+
+        if (attempts >= 3) {
+          if (env.DB) {
+            try {
+              await env.DB.prepare("UPDATE sermons SET status = 'failed', summary = 'Post-sermon synthesis failed; raw transcript preserved in archive.', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+                .bind(sermonId).run();
+            } catch (dbErr) {
+              console.error("Failed to update sermon status to failed:", dbErr);
+            }
+          }
+
+          if (env.CAPTION_DO) {
+            try {
+              const doRoomName = `tenant_${tenantId}`;
+              const id = env.CAPTION_DO.idFromName(doRoomName);
+              const stub = env.CAPTION_DO.get(id);
+              await stub.fetch(new Request("http://internal/internal/notify-archive-completed", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  tenantId,
+                  sermonId,
+                  status: "failed",
+                  error: err.message || "Post-sermon synthesis failed; raw transcript preserved in archive.",
+                  title,
+                  speaker
+                })
+              }));
+            } catch (notifErr) {
+              console.error("Error notifying DO of archive failure:", notifErr);
+            }
+          }
+
+          message.ack();
+        } else {
+          message.retry();
+        }
+      }
+    }
+  },
+
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
 

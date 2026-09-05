@@ -14,10 +14,10 @@
       --accent-glow: rgba(37, 99, 235, 0.35);
       --gold: #f59e0b;
       --gold-bg: rgba(245, 158, 11, 0.1);
+      --emerald: #16a34a;
+      --emerald-glow: rgba(22, 163, 74, 0.45);
       --text: #f8fafc;
       --muted: #94a3b8;
-      --danger: #ef4444;
-      --success: #10b981;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -65,6 +65,7 @@
       display: flex;
       gap: 12px;
       align-items: center;
+      flex-wrap: wrap;
     }
     .btn-nav {
       background: transparent;
@@ -91,6 +92,9 @@
       border-radius: 8px;
       box-shadow: 0 4px 14px var(--accent-glow);
       transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
     }
     .btn-primary:hover {
       filter: brightness(1.15);
@@ -119,10 +123,10 @@
       font-weight: 700;
     }
     .hero h1 {
-      font-size: 2.75rem;
+      font-size: 2.85rem;
       font-weight: 900;
       line-height: 1.2;
-      max-width: 860px;
+      max-width: 880px;
       letter-spacing: -0.02em;
     }
     .hero h1 span {
@@ -135,57 +139,75 @@
       color: var(--muted);
       max-width: 740px;
     }
-    .hero-cta-group {
-      display: flex;
-      gap: 14px;
-      flex-wrap: wrap;
-      justify-content: center;
-      margin-top: 10px;
-    }
 
-    /* The Problem Box / The Industry Racket */
-    .racket-card {
-      background: rgba(239, 68, 68, 0.05);
-      border: 1px solid rgba(239, 68, 68, 0.25);
-      border-radius: 16px;
-      padding: 32px;
+    /* BIG CALVARY WR, WI ACTION BUTTON */
+    .calvary-cta-container {
       display: flex;
       flex-direction: column;
-      gap: 16px;
-    }
-    .racket-title {
-      color: #fca5a5;
-      font-size: 1.25rem;
-      font-weight: 800;
-      display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 12px;
+      margin-top: 14px;
+      width: 100%;
     }
-    .racket-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: 18px;
-      margin-top: 8px;
+    .btn-calvary {
+      background: linear-gradient(135deg, #15803d 0%, #166534 100%);
+      color: #ffffff;
+      text-decoration: none;
+      font-size: 1.45rem;
+      font-weight: 900;
+      letter-spacing: 0.03em;
+      padding: 22px 42px;
+      border-radius: 16px;
+      border: 1.5px solid rgba(74, 222, 128, 0.4);
+      box-shadow: 0 12px 36px var(--emerald-glow), 0 0 20px rgba(34, 197, 94, 0.25);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      text-align: center;
+      max-width: 90%;
     }
-    .racket-item {
-      background: #0b1120;
-      border: 1px solid #1f2937;
+    .btn-calvary:hover {
+      filter: brightness(1.15);
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: 0 16px 44px rgba(22, 163, 74, 0.6);
+    }
+    .calvary-subtext {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #86efac;
+      letter-spacing: 0.02em;
+    }
+    .hero-secondary-links {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 6px;
+    }
+    .btn-secondary {
+      background: #0f172a;
+      border: 1px solid var(--card-border);
+      color: #cbd5e1;
+      text-decoration: none;
+      font-size: 0.95rem;
+      font-weight: 700;
+      padding: 12px 20px;
       border-radius: 10px;
-      padding: 16px;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
     }
-    .racket-item b {
-      color: #fff;
-      display: block;
-      margin-bottom: 6px;
-      font-size: 0.98rem;
-    }
-    .racket-item p {
-      font-size: 0.88rem;
-      color: var(--muted);
-      line-height: 1.45;
+    .btn-secondary:hover {
+      background: #1e293b;
+      border-color: var(--accent);
+      color: #ffffff;
+      transform: translateY(-1px);
     }
 
-    /* How Spoken Light Works */
+    /* Core Features */
     .section-title {
       font-size: 1.85rem;
       font-weight: 800;
@@ -228,64 +250,7 @@
       line-height: 1.5;
     }
 
-    /* Pricing & White-Glove Setup */
-    .pricing-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 24px;
-    }
-    .pricing-card {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 16px;
-      padding: 32px;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      gap: 20px;
-      position: relative;
-    }
-    .pricing-card.featured {
-      border-color: var(--accent);
-      box-shadow: 0 8px 32px var(--accent-glow);
-    }
-    .pricing-badge {
-      position: absolute;
-      top: -12px;
-      right: 24px;
-      background: var(--accent);
-      color: #fff;
-      font-size: 0.75rem;
-      font-weight: 800;
-      padding: 4px 12px;
-      border-radius: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-    .price-num {
-      font-size: 2.8rem;
-      font-weight: 900;
-      color: #fff;
-      line-height: 1;
-    }
-    .price-sub {
-      font-size: 0.88rem;
-      color: var(--muted);
-    }
-    .price-features {
-      list-style: none;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      font-size: 0.92rem;
-    }
-    .price-features li {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    /* Founder Note / Central Wisconsin Roots */
+    /* Founder Note */
     .founder-card {
       background: #0d1527;
       border: 1px solid #1e3a8a;
@@ -337,18 +302,19 @@
       border: 1px solid var(--card-border);
       color: #e2e8f0;
       text-decoration: none;
-      font-size: 0.88rem;
+      font-size: 0.92rem;
       font-weight: 700;
-      padding: 10px 16px;
+      padding: 12px 20px;
       border-radius: 8px;
       display: inline-flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
       transition: all 0.2s ease;
     }
     .console-link-btn:hover {
       background: #1e293b;
       border-color: var(--accent);
+      color: #ffffff;
     }
   </style>
 </head>
@@ -361,10 +327,9 @@
         🎙️ Spoken Light <span class="badge-wi">Central Wisconsin Built</span>
       </div>
       <nav class="nav-links">
-        <a href="/sermons" class="btn-nav">📖 Sermon Notes</a>
-        <a href="/overlay" class="btn-nav" target="_blank">📺 OBS Overlay</a>
-        <button id="openDemoNavBtn" class="btn-nav" style="border: 1px solid var(--accent); color: #93c5fd; cursor: pointer;">🎙️ Test Live Demo</button>
-        <button id="openChurchNavBtn" class="btn-primary" style="background: linear-gradient(135deg, #15803d, #166534); cursor: pointer;">⛪ Registered Church &rarr;</button>
+        <a href="/sermons?tenant=calvary" class="btn-nav">📖 Sermon Notes</a>
+        <a href="/overlay?room=calvary" class="btn-nav" target="_blank">📺 OBS Overlay</a>
+        <a href="/booth?room=calvary" class="btn-primary" style="background: linear-gradient(135deg, #15803d, #166534);">⛪ Calvary Sound Booth &rarr;</a>
       </nav>
     </header>
 
@@ -378,24 +343,29 @@
         Spoken Light delivers unlimited live speech-to-text broadcast subtitles, instant OBS transparent lower-thirds, scripture-anchored chapter slicing, and post-service pastoral study notes.
       </p>
 
-      <!-- DUAL ROOM CTA: DEMO VS REGISTERED CHURCH CONSOLE -->
-      <div class="hero-cta-group" style="margin-top: 8px; display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;">
-        <button id="heroDemoBtn" class="btn-primary" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); padding: 18px 36px; font-size: 1.2rem; font-weight: 800; border-radius: 12px; display: inline-flex; align-items: center; gap: 10px; box-shadow: 0 8px 28px var(--accent-glow); cursor: pointer; border: none;">
-          🎙️ TEST LIVE DEMO
-        </button>
-        <button id="heroChurchBtn" class="btn-primary" style="background: linear-gradient(135deg, #15803d, #166534); padding: 18px 36px; font-size: 1.2rem; font-weight: 800; border-radius: 12px; display: inline-flex; align-items: center; gap: 10px; box-shadow: 0 8px 28px rgba(22,101,52,0.45); cursor: pointer; border: none;">
-          ⛪ REGISTERED CHURCH (PASTORS) &rarr;
-        </button>
+      <!-- BIG ZERO-BLOAT CALVARY BUTTON -->
+      <div class="calvary-cta-container">
+        <a href="/booth?room=calvary" class="btn-calvary">
+          ⛪ CALVARY BAPTIST CHURCH (WR, WI) &rarr;
+        </a>
+        <div class="calvary-subtext">
+          ⚡ Direct 1-Click Sanctuary Soundboard Console • Zero Logins • Zero Passwords
+        </div>
       </div>
-      <div style="display:flex; gap:12px; flex-wrap:wrap; justify-content:center; margin-top:4px;">
-        <a href="/sermons" class="btn-nav" style="border: 1px solid var(--card-border); padding: 10px 18px; font-weight:700;">📖 Pastoral Study Notes Archive</a>
-        <a href="/overlay" class="btn-nav" target="_blank" style="border: 1px solid var(--card-border); padding: 10px 18px; font-weight:700;">📺 Live OBS Transparent Overlay</a>
+
+      <div class="hero-secondary-links">
+        <a href="/overlay?room=calvary" class="btn-secondary" target="_blank">
+          📺 Live OBS Transparent Overlay
+        </a>
+        <a href="/sermons?tenant=calvary" class="btn-secondary">
+          📖 Pastoral Sermon Study Notes
+        </a>
       </div>
 
       <!-- THE GREAT COMMISSION RADIO TOWER VISUAL -->
-      <div style="width:100%; max-width:880px; margin-top:24px; border-radius:16px; overflow:hidden; border:1px solid #1e293b; background:#020617; box-shadow:0 24px 64px rgba(0,0,0,0.8); position:relative;">
+      <div style="width:100%; max-width:880px; margin-top:20px; border-radius:16px; overflow:hidden; border:1px solid #1e293b; background:#020617; box-shadow:0 24px 64px rgba(0,0,0,0.8); position:relative;">
         <div style="position:relative; width:100%; height:auto; overflow:hidden;">
-          <img src="/tower.jpg" alt="Spoken Light — Remote Ridge Broadcast Tower & Mission Aircraft" style="width:100%; height:auto; display:block; filter:brightness(0.95); transition:transform 0.4s ease;">
+          <img src="/tower.jpg" alt="Spoken Light — Remote Ridge Broadcast Tower & Mission Aircraft" style="width:100%; height:auto; display:block; filter:brightness(0.95);">
           <div style="position:absolute; bottom:0; left:0; right:0; padding:24px; background:linear-gradient(180deg, transparent 0%, rgba(2,6,23,0.92) 80%, #020617 100%); display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:12px;">
             <div>
               <div style="font-size:0.78rem; font-weight:800; color:#f59e0b; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:4px;">
@@ -421,8 +391,8 @@
       <div class="features-grid">
         <div class="feature-card">
           <div class="feature-icon">📺</div>
-          <h3>Native OBS Alpha Lower-Third</h3>
-          <p>A 100% transparent browser source link (<code>/overlay</code>). Drops cleanly over your camera feed in OBS, vMix, or ATEM with kinetic 3-line rolling subtitles and pop-up verse banners.</p>
+          <h3>Native OBS Transparent Lower-Third</h3>
+          <p>A 100% transparent browser source link (<code>/overlay?room=calvary</code>). Drops cleanly over your camera feed in OBS Studio with high-contrast ProPresenter-style typography and scripture banners.</p>
         </div>
 
         <div class="feature-card">
@@ -434,7 +404,7 @@
         <div class="feature-card">
           <div class="feature-icon">⌨️</div>
           <h3>Single Spacebar Worship Mute</h3>
-          <p>Hit the soundboard keyboard spacebar during worship music to instantly mute subtitles so singing isn’t garbled. Hit it again when the sermon begins. Simple enough for any 15-year-old volunteer.</p>
+          <p>Hit the soundboard keyboard spacebar during worship music to instantly mute subtitles so singing isn’t garbled. Hit it again when the sermon begins. Zero friction.</p>
         </div>
 
         <div class="feature-card">
@@ -457,8 +427,6 @@
       </div>
     </section>
 
-
-
     <!-- FOUNDER & CENTRAL WISCONSIN STORY -->
     <section id="about" class="founder-card">
       <div class="founder-avatar">🌲</div>
@@ -478,206 +446,11 @@
 
     <!-- FOOTER NAV -->
     <footer class="console-links">
-      <button id="footerDemoBtn" class="console-link-btn" style="cursor:pointer;">🎙️ Live Demo Bench</button>
-      <button id="footerChurchBtn" class="console-link-btn" style="cursor:pointer;">⛪ My Church's Sound Booth</button>
-      <a href="/overlay" class="console-link-btn" target="_blank">📺 OBS Transparent Overlay</a>
-      <a href="/sermons" class="console-link-btn">📖 Pastor Sermon Notes Portal</a>
+      <a href="/booth?room=calvary" class="console-link-btn">⛪ Calvary Sound Booth Console</a>
+      <a href="/overlay?room=calvary" class="console-link-btn" target="_blank">📺 OBS Transparent Overlay</a>
+      <a href="/sermons?tenant=calvary" class="console-link-btn">📖 Pastor Sermon Notes Portal</a>
     </footer>
   </div>
 
-  <!-- DEMO INTAKE MODAL -->
-  <div id="demoModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.85); backdrop-filter:blur(6px); z-index:9999; align-items:center; justify-content:center; padding:20px;">
-    <div style="background:#0d1527; border:1px solid #1e3a8a; border-radius:16px; max-width:540px; width:100%; padding:28px; box-shadow:0 16px 48px rgba(0,0,0,0.9); display:flex; flex-direction:column; gap:16px;">
-      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #1f2937; padding-bottom:12px;">
-        <div style="font-size:1.3rem; font-weight:800; color:#fff; display:flex; align-items:center; gap:8px;">
-          🎙️ Live Demo Bench Access
-        </div>
-        <button id="closeDemoModalBtn" style="background:none; border:none; color:var(--muted); font-size:1.6rem; cursor:pointer;">&times;</button>
-      </div>
-      <p style="color:var(--muted); font-size:0.9rem; line-height:1.45;">
-        Register below to test live speech-to-text captions in our isolated demo sandbox. Or email directly for custom church soundboard setup.
-      </p>
-      <form id="demoForm" style="display:flex; flex-direction:column; gap:12px;">
-        <div>
-          <label style="font-size:0.8rem; font-weight:700; color:var(--muted); display:block; margin-bottom:4px;">Church Name *</label>
-          <input type="text" id="demoChurchInput" required placeholder="e.g. Grace Fellowship Church" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid #1f2937; background:#070a12; color:#fff; font-size:0.95rem;">
-        </div>
-        <div>
-          <label style="font-size:0.8rem; font-weight:700; color:var(--muted); display:block; margin-bottom:4px;">Your Name / Role *</label>
-          <input type="text" id="demoNameInput" required placeholder="e.g. Pastor Dan / AV Lead" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid #1f2937; background:#070a12; color:#fff; font-size:0.95rem;">
-        </div>
-        <div>
-          <label style="font-size:0.8rem; font-weight:700; color:var(--muted); display:block; margin-bottom:4px;">Email Address *</label>
-          <input type="email" id="demoEmailInput" required placeholder="e.g. dan@gracefellowship.org" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid #1f2937; background:#070a12; color:#fff; font-size:0.95rem;">
-        </div>
-        <div>
-          <label style="font-size:0.8rem; font-weight:700; color:var(--muted); display:block; margin-bottom:4px;">Phone (Optional)</label>
-          <input type="tel" id="demoPhoneInput" placeholder="e.g. (715) 555-0199" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid #1f2937; background:#070a12; color:#fff; font-size:0.95rem;">
-        </div>
-        <div id="demoError" style="color:#ef4444; font-size:0.85rem; display:none;"></div>
-        <button type="submit" id="demoSubmitBtn" class="btn-primary" style="margin-top:6px; padding:14px; font-size:1.05rem; font-weight:800; cursor:pointer; border:none; border-radius:10px;">
-          🚀 START LIVE DEMO SANDBOX &rarr;
-        </button>
-      </form>
-      <div style="font-size:0.82rem; color:var(--muted); text-align:center; padding-top:8px; border-top:1px solid #1f2937;">
-        Need white-glove setup? Email directly: <a href="mailto:dondlingergeneralcontracting@gmail.com?subject=Spoken%20Light%20Church%20Demo%20Inquiry" style="color:#60a5fa; text-decoration:none; font-weight:700;">dondlingergeneralcontracting@gmail.com</a>
-      </div>
-    </div>
-  </div>
-
-  <!-- REGISTERED CHURCH LOGIN MODAL -->
-  <div id="churchModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.85); backdrop-filter:blur(6px); z-index:9999; align-items:center; justify-content:center; padding:20px;">
-    <div style="background:#0d1527; border:1px solid #15803d; border-radius:16px; max-width:480px; width:100%; padding:28px; box-shadow:0 16px 48px rgba(0,0,0,0.9); display:flex; flex-direction:column; gap:16px;">
-      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #1f2937; padding-bottom:12px;">
-        <div style="font-size:1.3rem; font-weight:800; color:#fff; display:flex; align-items:center; gap:8px;">
-          ⛪ Registered Church Login
-        </div>
-        <button id="closeChurchModalBtn" style="background:none; border:none; color:var(--muted); font-size:1.6rem; cursor:pointer;">&times;</button>
-      </div>
-      <p style="color:var(--muted); font-size:0.9rem; line-height:1.45;">
-        Calvary Baptist Church pastors & soundboard operators: quick login below.
-      </p>
-
-      <!-- 1-TAP QUICK LAUNCH FOR CALVARY PASTORS -->
-      <button type="button" id="quickCalvaryLaunchBtn" style="background:linear-gradient(135deg, #15803d, #166534); color:#fff; font-weight:800; border:none; border-radius:12px; padding:16px; cursor:pointer; font-size:1.05rem; width:100%; box-shadow:0 4px 18px rgba(21,128,61,0.4); display:flex; align-items:center; justify-content:center; gap:8px;">
-        ⚡ 1-Tap Pastor Login (Calvary cbc_wr) &rarr;
-      </button>
-
-      <div style="display:flex; align-items:center; gap:10px; color:#64748b; font-size:0.8rem; margin:2px 0;">
-        <div style="flex:1; height:1px; background:#1f2937;"></div>
-        <span>OR ENTER CODE & PIN</span>
-        <div style="flex:1; height:1px; background:#1f2937;"></div>
-      </div>
-
-      <form id="churchForm" style="display:flex; flex-direction:column; gap:14px;">
-        <div>
-          <label style="font-size:0.8rem; font-weight:700; color:var(--muted); display:block; margin-bottom:4px;">Church Code</label>
-          <input type="text" id="churchCodeInput" required value="cbc_wr" placeholder="e.g. cbc_wr" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid #1f2937; background:#070a12; color:#fff; font-size:0.95rem; text-transform:lowercase;">
-        </div>
-        <div>
-          <label style="font-size:0.8rem; font-weight:700; color:var(--muted); display:block; margin-bottom:4px;">Soundboard PIN or Passphrase</label>
-          <input type="password" id="churchPassInput" required value="469airportave" placeholder="Enter 469airportave or 469" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid #1f2937; background:#070a12; color:#fff; font-size:0.95rem;">
-        </div>
-        <div id="churchError" style="color:#ef4444; font-size:0.85rem; display:none;"></div>
-        <button type="submit" id="churchSubmitBtn" class="btn-primary" style="background:linear-gradient(135deg, #15803d, #166534); padding:14px; font-size:1.05rem; font-weight:800; cursor:pointer; border:none; border-radius:10px;">
-          🔓 UNLOCK SANCTUARY SOUNDBOARD &rarr;
-        </button>
-      </form>
-      <div style="font-size:0.82rem; color:var(--muted); text-align:center; padding-top:8px; border-top:1px solid #1f2937;">
-        Direct bookmark URL: <code>spokenlight.dondlingergc.com/booth?room=calvary&key=469airportave</code>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    const demoModal = document.getElementById('demoModal');
-    const churchModal = document.getElementById('churchModal');
-
-    function openDemoModal() { demoModal.style.display = 'flex'; }
-    function closeDemoModal() { demoModal.style.display = 'none'; }
-    function openChurchModal() { churchModal.style.display = 'flex'; }
-    function closeChurchModal() { churchModal.style.display = 'none'; }
-
-    document.getElementById('openDemoNavBtn')?.addEventListener('click', openDemoModal);
-    document.getElementById('heroDemoBtn')?.addEventListener('click', openDemoModal);
-    document.getElementById('footerDemoBtn')?.addEventListener('click', openDemoModal);
-    document.getElementById('closeDemoModalBtn')?.addEventListener('click', closeDemoModal);
-
-    document.getElementById('openChurchNavBtn')?.addEventListener('click', openChurchModal);
-    document.getElementById('heroChurchBtn')?.addEventListener('click', openChurchModal);
-    document.getElementById('footerChurchBtn')?.addEventListener('click', openChurchModal);
-    document.getElementById('closeChurchModalBtn')?.addEventListener('click', closeChurchModal);
-
-    window.addEventListener('click', (e) => {
-      if (e.target === demoModal) closeDemoModal();
-      if (e.target === churchModal) closeChurchModal();
-    });
-
-    // Demo intake submit handler
-    document.getElementById('demoForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const errEl = document.getElementById('demoError');
-      errEl.style.display = 'none';
-      const btn = document.getElementById('demoSubmitBtn');
-      btn.innerText = 'Connecting...';
-      btn.disabled = true;
-
-      const payload = {
-        church_name: document.getElementById('demoChurchInput').value.trim(),
-        contact_name: document.getElementById('demoNameInput').value.trim(),
-        email: document.getElementById('demoEmailInput').value.trim(),
-        phone: document.getElementById('demoPhoneInput').value.trim()
-      };
-
-      try {
-        const res = await fetch('/api/demo/signup', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        const data = await res.json();
-        if (data.ok) {
-          localStorage.setItem('spokenlight_demo_registered', '1');
-          localStorage.setItem('spokenlight_demo_church', payload.church_name);
-          window.location.href = '/booth?room=demo';
-        } else {
-          errEl.innerText = data.error || 'Failed to initialize demo';
-          errEl.style.display = 'block';
-          btn.innerText = '🚀 START LIVE DEMO SANDBOX →';
-          btn.disabled = false;
-        }
-      } catch (err) {
-        // Fallback directly to sandbox if network hiccup
-        localStorage.setItem('spokenlight_demo_registered', '1');
-        window.location.href = '/booth?room=demo';
-      }
-    });
-
-    // Church sound booth auth submit handler
-    document.getElementById('churchForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const errEl = document.getElementById('churchError');
-      errEl.style.display = 'none';
-      const btn = document.getElementById('churchSubmitBtn');
-      btn.innerText = 'Verifying...';
-      btn.disabled = true;
-
-      const code = document.getElementById('churchCodeInput').value.trim().toLowerCase();
-      const passphrase = document.getElementById('churchPassInput').value.trim();
-
-      try {
-        const res = await fetch('/api/auth/church', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ church_code: code, passphrase })
-        });
-        const data = await res.json();
-        if (data.ok) {
-          localStorage.setItem('spokenlight_auth_token', data.token);
-          localStorage.setItem('spokenlight_tenant', data.tenant_id);
-          localStorage.setItem('spokenlight_church_name', data.name);
-          window.location.href = `/booth?room=${encodeURIComponent(data.tenant_id)}`;
-        } else {
-          errEl.innerText = data.error || 'Invalid church code or passphrase';
-          errEl.style.display = 'block';
-          btn.innerText = '🔓 UNLOCK SANCTUARY SOUNDBOARD →';
-          btn.disabled = false;
-        }
-      } catch (err) {
-        errEl.innerText = 'Connection error. Please try again.';
-        errEl.style.display = 'block';
-        btn.innerText = '🔓 UNLOCK SANCTUARY SOUNDBOARD →';
-        btn.disabled = false;
-      }
-    });
-
-    // 1-Tap quick launch for Calvary pastors and operators
-    document.getElementById('quickCalvaryLaunchBtn')?.addEventListener('click', () => {
-      localStorage.setItem('spokenlight_auth_token', 'auth_calvary_pastor_' + Date.now());
-      localStorage.setItem('spokenlight_tenant', 'calvary');
-      localStorage.setItem('spokenlight_church_name', 'Calvary Baptist Church');
-      window.location.href = '/booth?room=calvary&key=469airportave';
-    });
-  </script>
 </body>
 </html>

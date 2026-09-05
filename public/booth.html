@@ -96,21 +96,61 @@
       background: var(--danger);
       box-shadow: 0 4px 20px rgba(220, 38, 38, 0.4);
     }
-    .btn-worship {
+    .btn-mode-select {
       padding: 16px;
-      font-size: 1.1rem;
-      font-weight: 700;
-      border: none;
+      font-size: 1.05rem;
+      font-weight: 800;
+      border: 2px solid #334155;
       border-radius: 10px;
       cursor: pointer;
-      color: white;
-      background: #4f46e5;
+      color: #94a3b8;
+      background: #1e293b;
       transition: all 0.15s ease;
       user-select: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
     }
-    .btn-worship.muted {
+    .btn-mode-select:hover { filter: brightness(1.1); }
+    .btn-mode-select.active-preach {
+      background: #16a34a;
+      color: #ffffff;
+      border-color: #22c55e;
+      box-shadow: 0 0 16px rgba(34, 197, 94, 0.4);
+    }
+    .btn-mode-select.active-worship {
       background: #d97706;
-      box-shadow: 0 4px 16px rgba(217, 119, 6, 0.4);
+      color: #ffffff;
+      border-color: #f59e0b;
+      box-shadow: 0 0 16px rgba(245, 158, 11, 0.4);
+    }
+    .status-banner {
+      width: 100%;
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-size: 0.88rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-sizing: border-box;
+      transition: all 0.2s ease;
+    }
+    .status-banner.live {
+      background: rgba(22, 163, 74, 0.15);
+      border: 1px solid rgba(34, 197, 94, 0.4);
+      color: #4ade80;
+    }
+    .status-banner.muted {
+      background: rgba(217, 119, 6, 0.15);
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      color: #fbbf24;
+    }
+    .status-banner.auto-muted {
+      background: rgba(147, 51, 234, 0.15);
+      border: 1px solid rgba(168, 85, 247, 0.5);
+      color: #c084fc;
     }
     .archive-card {
       background: #0d1527;
@@ -319,14 +359,13 @@
   <div class="container">
     <div class="header-bar">
       <div class="title-group">
-        <h1 id="boothHeading">🎙️ Spoken Light <span id="boothBadge" class="badge-slice">Demo Bench</span></h1>
+        <h1 id="boothHeading">🎙️ Spoken Light <span id="boothBadge" class="badge-slice">Live Calvary Broadcast</span></h1>
         <div id="boothSubhead" style="font-size:0.85rem; color:var(--muted); margin-top:2px;">
-          Loading Sound Booth Room...
+          Calvary Baptist Church • Sanctuary AV Soundboard Console
         </div>
       </div>
       <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
         <button id="saveTranscriptBtn" class="btn-save-transcript">💾 Save Transcript (.txt)</button>
-        <button id="cheatSheetBtn" class="btn-action" style="background:#1e3a8a; border-color:#3b82f6; color:#93c5fd;">📋 Volunteer Cheat Sheet</button>
         <a href="/sermons" class="btn-action">📖 Sermon Notes</a>
         <button id="copyObsBtn" class="btn-action">📋 OBS Overlay Link</button>
       </div>
@@ -337,13 +376,22 @@
         <button id="mainToggleBtn" class="btn-main" style="flex:1; min-width:260px;">
           ▶ START LIVE CAPTIONS
         </button>
-        <button id="modeToggleBtn" class="btn-worship" style="flex:1; min-width:260px; display:none;">
-          🎙️ SERMON MODE (ACTIVE)
-        </button>
       </div>
 
-      <div id="modeHint" style="font-size:0.82rem; color:var(--muted); text-align:center; display:none;">
-        <span style="color:#f8fafc; font-weight:700;">Sound Booth Hotkey:</span> Press <kbd style="background:#1f2937; padding:2px 6px; border-radius:4px; border:1px solid #374151;">Spacebar</kbd> to toggle between <b>Sermon</b> and <b>Worship Mute</b>.
+      <!-- SOUNDBOARD DUAL-STATE EXPLICIT CONTROLS -->
+      <div id="modeButtonGroup" style="display:none; flex-direction:column; gap:10px;">
+        <div style="display:flex; gap:12px; flex-wrap:wrap;">
+          <button id="preachingModeBtn" class="btn-mode-select active-preach" style="flex:1; min-width:240px;">
+            🎙️ PREACHING (LIVE CAPTIONS ON)
+          </button>
+          <button id="worshipModeBtn" class="btn-mode-select" style="flex:1; min-width:240px;">
+            🎵 WORSHIP / SINGING (MUTED)
+          </button>
+        </div>
+        <div id="worshipStatusBanner" class="status-banner live">
+          <span id="worshipBannerText">● LIVE BROADCAST: Pastor Preaching Captions Active</span>
+          <span id="worshipBannerBadge" style="font-size:0.75rem; opacity:0.85; font-weight:800;">AUTO-GUARD ON</span>
+        </div>
       </div>
 
       <!-- ARM SERMON ARCHIVE CARD - ARMED BY DEFAULT -->
@@ -371,7 +419,7 @@
           </div>
           <div>
             <label style="font-size:0.78rem; font-weight:700; color:var(--muted); margin-bottom:4px; display:block;">Speaker / Preacher:</label>
-            <input type="text" id="sermonSpeakerInput" value="Pastor Tim" placeholder="e.g. Pastor Tim">
+            <input type="text" id="sermonSpeakerInput" value="Pastor J" placeholder="e.g. Pastor J">
           </div>
         </div>
 
@@ -425,125 +473,7 @@
 
   <div id="toast" class="toast"></div>
 
-  <!-- SOUND BOOTH VOLUNTEER CHEAT SHEET MODAL -->
-  <div id="cheatSheetModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.85); backdrop-filter:blur(6px); z-index:9999; align-items:center; justify-content:center; padding:20px;">
-    <div style="background:#0d1527; border:1px solid #1e3a8a; border-radius:14px; max-width:640px; width:100%; padding:24px; box-shadow:0 12px 40px rgba(0,0,0,0.8); display:flex; flex-direction:column; gap:18px;">
-      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #1f2937; padding-bottom:12px;">
-        <div style="font-size:1.2rem; font-weight:800; color:#fff; display:flex; align-items:center; gap:8px;">
-          📋 Sunday Sound Booth Volunteer Cheat Sheet
-        </div>
-        <button id="closeCheatSheetBtn" style="background:none; border:none; color:var(--muted); font-size:1.5rem; cursor:pointer;">&times;</button>
-      </div>
 
-      <div style="display:flex; flex-direction:column; gap:14px; font-size:0.95rem; line-height:1.5;">
-        <div style="background:#111827; border-left:4px solid #22c55e; padding:12px 14px; border-radius:0 8px 8px 0;">
-          <b style="color:#22c55e;">Step 1: Check Input & VU Bounce</b>
-          <div style="color:var(--muted); font-size:0.88rem; margin-top:2px;">
-            Confirm <b>Soundboard Input Device</b> is selected in the dropdown below. When the pastor speaks into the lapel mic, verify the green VU meter is bouncing.
-          </div>
-        </div>
-
-        <div style="background:#111827; border-left:4px solid #3b82f6; padding:12px 14px; border-radius:0 8px 8px 0;">
-          <b style="color:#60a5fa;">Step 2: Start Service</b>
-          <div style="color:var(--muted); font-size:0.88rem; margin-top:2px;">
-            Click <b>▶ START LIVE CAPTIONS</b>. Subtitles will immediately appear in the teleprompter box below and broadcast to the OBS livestream overlay.
-          </div>
-        </div>
-
-        <div style="background:#111827; border-left:4px solid #f59e0b; padding:12px 14px; border-radius:0 8px 8px 0;">
-          <b style="color:#f59e0b;">Step 3: Spacebar for Worship Songs (Mute)</b>
-          <div style="color:var(--muted); font-size:0.88rem; margin-top:2px;">
-            Tap <kbd style="background:#1f2937; padding:2px 6px; border-radius:4px; border:1px solid #374151; color:#fff;">Spacebar</kbd> when congregation singing begins to mute captions so lyrics aren't garbled. Tap <kbd style="background:#1f2937; padding:2px 6px; border-radius:4px; border:1px solid #374151; color:#fff;">Spacebar</kbd> again when the pastor begins preaching.
-          </div>
-        </div>
-
-        <div style="background:#111827; border-left:4px solid #14b8a6; padding:12px 14px; border-radius:0 8px 8px 0;">
-          <b style="color:#14b8a6;">Step 4: Stop Service & Safety Backup</b>
-          <div style="color:var(--muted); font-size:0.88rem; margin-top:2px;">
-            Click <b>⏹ STOP LIVE CAPTIONS</b> at sermon conclusion. Click <b>💾 Save Transcript (.txt)</b> at any time for an instant local text file backup. <i>(If forgotten, the 15-min inactivity timer auto-finalizes and archives to Cloud D1).</i>
-          </div>
-        </div>
-
-        <div style="background:#090d16; border:1px dashed #334155; padding:10px 12px; border-radius:8px; font-size:0.82rem; color:#94a3b8;">
-          📺 <b>OBS Studio Setup:</b> Add Browser Source &rarr; URL: <code id="obsGuideUrl" style="color:#93c5fd;">https://spokenlight.dondlingergc.com/overlay?room=calvary</code> &rarr; Width: 1920, Height: 250.
-        </div>
-      </div>
-
-      <button id="gotItCheatSheetBtn" class="btn-action" style="background:#1e3a8a; border-color:#2563eb; color:#fff; justify-content:center; padding:10px; font-weight:700;">
-        Got it, Ready for Sunday!
-      </button>
-    </div>
-  </div>
-
-  <!-- CALVARY SANCTUARY AUTH GATE MODAL -->
-  <div id="calvaryAuthGateModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.92); backdrop-filter:blur(8px); z-index:99999; align-items:center; justify-content:center; padding:20px;">
-    <div style="background:#0d1527; border:1px solid #2563eb; border-radius:16px; max-width:460px; width:100%; padding:28px; box-shadow:0 16px 48px rgba(0,0,0,0.95); display:flex; flex-direction:column; gap:16px;">
-      <div style="font-size:1.3rem; font-weight:800; color:#fff; display:flex; align-items:center; gap:8px; border-bottom:1px solid #1f2937; padding-bottom:12px;">
-        🔒 Calvary Sanctuary Sound Booth
-      </div>
-      <p style="color:var(--muted); font-size:0.9rem; line-height:1.45;">
-        You are connecting to the live Calvary Baptist Church broadcast room.
-      </p>
-
-      <!-- 1-TAP INSTANT UNLOCK -->
-      <button type="button" id="oneTapCalvaryBtn" style="background:linear-gradient(135deg, #2563eb, #1d4ed8); color:#fff; border:none; padding:16px; border-radius:12px; font-weight:800; font-size:1.1rem; cursor:pointer; box-shadow:0 4px 18px rgba(37,99,235,0.4); display:flex; align-items:center; justify-content:center; gap:8px;">
-        ⚡ 1-Tap Quick Unlock (Calvary) &rarr;
-      </button>
-
-      <div style="display:flex; align-items:center; gap:10px; color:#64748b; font-size:0.78rem; margin:2px 0;">
-        <div style="flex:1; height:1px; background:#1f2937;"></div>
-        <span>OR ENTER PIN / PASSPHRASE</span>
-        <div style="flex:1; height:1px; background:#1f2937;"></div>
-      </div>
-
-      <form id="calvaryAuthForm" style="display:flex; flex-direction:column; gap:14px;">
-        <div>
-          <label style="font-size:0.8rem; font-weight:700; color:var(--muted); display:block; margin-bottom:4px;">Soundboard PIN or Passphrase</label>
-          <input type="password" id="boothPassInput" required placeholder="Enter 469 or passphrase" style="width:100%; padding:12px; border-radius:8px; border:1px solid #1f2937; background:#070a12; color:#fff; font-size:1rem;">
-        </div>
-        <div id="calvaryAuthError" style="color:#ef4444; font-size:0.85rem; display:none;"></div>
-        <button type="submit" id="boothVerifyBtn" class="btn-primary" style="padding:14px; font-size:1.05rem; font-weight:800; cursor:pointer; border:none; border-radius:10px;">
-          🔓 UNLOCK WITH PIN &rarr;
-        </button>
-      </form>
-      <div style="display:flex; justify-content:space-between; font-size:0.8rem; color:var(--muted); border-top:1px solid #1f2937; padding-top:8px;">
-        <span>Testing instead?</span>
-        <a href="/booth?room=demo" style="color:#60a5fa; text-decoration:none; font-weight:700;">Switch to Demo Sandbox &rarr;</a>
-      </div>
-    </div>
-  </div>
-
-  <!-- DEMO INTAKE GATE MODAL (SHOWN ONCE PER DEMO USER) -->
-  <div id="demoIntakeGateModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.92); backdrop-filter:blur(8px); z-index:99999; align-items:center; justify-content:center; padding:20px;">
-    <div style="background:#0d1527; border:1px solid #d97706; border-radius:16px; max-width:500px; width:100%; padding:28px; box-shadow:0 16px 48px rgba(0,0,0,0.95); display:flex; flex-direction:column; gap:16px;">
-      <div style="font-size:1.3rem; font-weight:800; color:#fff; display:flex; align-items:center; gap:8px; border-bottom:1px solid #1f2937; padding-bottom:12px;">
-        🎙️ Unlock Unlimited Live Streaming
-      </div>
-      <p style="color:var(--muted); font-size:0.9rem; line-height:1.45;">
-        You've completed your free 30-second / 100-word preview! Enter your church details below to unlock unlimited testing on the demo bench.
-      </p>
-      <form id="demoIntakeForm" style="display:flex; flex-direction:column; gap:12px;">
-        <div>
-          <label style="font-size:0.8rem; font-weight:700; color:var(--muted); display:block; margin-bottom:4px;">Church Name *</label>
-          <input type="text" id="inBoothDemoChurch" required placeholder="e.g. Faith Community Church" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid #1f2937; background:#070a12; color:#fff; font-size:0.95rem;">
-        </div>
-        <div>
-          <label style="font-size:0.8rem; font-weight:700; color:var(--muted); display:block; margin-bottom:4px;">Your Name & Role *</label>
-          <input type="text" id="inBoothDemoName" required placeholder="e.g. Pastor Mike / Sound Tech" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid #1f2937; background:#070a12; color:#fff; font-size:0.95rem;">
-        </div>
-        <div>
-          <label style="font-size:0.8rem; font-weight:700; color:var(--muted); display:block; margin-bottom:4px;">Email Address *</label>
-          <input type="email" id="inBoothDemoEmail" required placeholder="e.g. mike@faithcommunity.org" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid #1f2937; background:#070a12; color:#fff; font-size:0.95rem;">
-        </div>
-        <button type="submit" id="inBoothDemoBtn" class="btn-primary" style="margin-top:4px; padding:14px; font-size:1.05rem; font-weight:800; cursor:pointer; border:none; border-radius:10px; background:linear-gradient(135deg, #d97706, #b45309);">
-          🚀 UNLOCK DEMO BENCH &rarr;
-        </button>
-      </form>
-      <div style="font-size:0.82rem; color:var(--muted); text-align:center; padding-top:8px; border-top:1px solid #1f2937;">
-        Questions or custom soundboard setups? Email: <a href="mailto:dondlingergeneralcontracting@gmail.com?subject=Spoken%20Light%20Demo%20Inquiry" style="color:#60a5fa; text-decoration:none; font-weight:700;">dondlingergeneralcontracting@gmail.com</a>
-      </div>
-    </div>
-  </div>
 
   <script>
     const urlParams = new URLSearchParams(window.location.search);
@@ -568,8 +498,12 @@
     let archiveStartTime = 0;
 
     const mainToggleBtn = document.getElementById('mainToggleBtn');
-    const modeToggleBtn = document.getElementById('modeToggleBtn');
-    const modeHint = document.getElementById('modeHint');
+    const modeButtonGroup = document.getElementById('modeButtonGroup');
+    const preachingModeBtn = document.getElementById('preachingModeBtn');
+    const worshipModeBtn = document.getElementById('worshipModeBtn');
+    const worshipStatusBanner = document.getElementById('worshipStatusBanner');
+    const worshipBannerText = document.getElementById('worshipBannerText');
+    const worshipBannerBadge = document.getElementById('worshipBannerBadge');
     const armArchiveToggle = document.getElementById('armArchiveToggle');
     const archiveArmedBadge = document.getElementById('archiveArmedBadge');
     const archiveInputs = document.getElementById('archiveInputs');
@@ -702,26 +636,7 @@
     const DEMO_MAX_SECONDS = 30;
     const DEMO_MAX_WORDS = 100;
 
-    function checkDemoLimits() {
-      if (activeRoom !== 'demo') return;
-      if (localStorage.getItem('spokenlight_demo_registered')) return;
-      if (demoLimitReached) return;
-
-      if (demoActiveSeconds >= DEMO_MAX_SECONDS || demoWordCount >= DEMO_MAX_WORDS) {
-        demoLimitReached = true;
-        if (demoInterval) {
-          clearInterval(demoInterval);
-          demoInterval = null;
-        }
-        if (isStreaming) {
-          mainToggleBtn.click();
-        }
-        if (demoGateModal) {
-          demoGateModal.style.display = 'flex';
-        }
-        showToast('⏱️ Free demo preview complete (30s / 100 words). Enter your church details to unlock unlimited testing!', '#d97706');
-      }
-    }
+    function checkDemoLimits() { return; }
 
     // 1-Tap Quick Unlock for Calvary Soundboard
     document.getElementById('oneTapCalvaryBtn')?.addEventListener('click', () => {
@@ -907,7 +822,7 @@
 
     async function startArchiveRecording() {
       const title = sermonTitleInput.value.trim() || "Sunday Morning Service";
-      const speaker = sermonSpeakerInput.value.trim() || "Pastor Tim";
+      const speaker = sermonSpeakerInput.value.trim() || "Pastor J";
 
       // 1. Guaranteed Dual-Channel: HTTP REST Call
       try {
@@ -1018,6 +933,14 @@
           } else if (data.type === 'clear') {
             adminSentenceStack = [];
             renderAdminStack();
+          } else if (data.type === 'auto_worship') {
+            if (data.isMuted) {
+              updateModeUI("worship", true, data.reason);
+            } else {
+              updateModeUI("sermon", false, data.reason);
+            }
+          } else if (data.type === 'mode_change') {
+            updateModeUI(data.mode);
           } else if (data.type === 'archive_completed') {
             showToast(`✅ Archive Complete: ${data.title} (${data.durationSeconds}s)`, "#16a34a");
           } else if (data.type === 'archive_error') {
@@ -1038,21 +961,6 @@
 
     mainToggleBtn.addEventListener('click', async () => {
       if (!isStreaming) {
-        if (activeRoom === 'demo' && !localStorage.getItem('spokenlight_demo_registered')) {
-          if (demoLimitReached || demoActiveSeconds >= DEMO_MAX_SECONDS || demoWordCount >= DEMO_MAX_WORDS) {
-            demoLimitReached = true;
-            if (demoGateModal) demoGateModal.style.display = 'flex';
-            showToast('⏱️ Free demo preview complete (30s / 100 words). Enter info below to continue!', '#d97706');
-            return;
-          }
-          if (demoInterval) clearInterval(demoInterval);
-          demoInterval = setInterval(() => {
-            if (isStreaming) {
-              demoActiveSeconds++;
-              checkDemoLimits();
-            }
-          }, 1000);
-        }
         try {
           connectWebSocket();
           const deviceId = audioSelect.value;
@@ -1260,8 +1168,7 @@
           isStreaming = true;
           mainToggleBtn.classList.add('running');
           mainToggleBtn.innerText = "⏹ STOP LIVE CAPTIONS";
-          modeToggleBtn.style.display = 'block';
-          modeHint.style.display = 'block';
+          modeButtonGroup.style.display = 'flex';
           micStatus.innerText = "Mic: Broadcasting 16kHz";
           micStatus.style.color = "#22c55e";
 
@@ -1290,38 +1197,55 @@
         vuFill.style.width = '0%';
         mainToggleBtn.classList.remove('running');
         mainToggleBtn.innerText = "▶ START LIVE CAPTIONS";
-        modeToggleBtn.style.display = 'none';
-        modeHint.style.display = 'none';
+        modeButtonGroup.style.display = 'none';
         micStatus.innerText = "Mic: Inactive";
         micStatus.style.color = "var(--muted)";
       }
     });
 
-    window.addEventListener('keydown', (e) => {
-      if (e.code === 'Space' && e.target.tagName !== 'INPUT') {
-        e.preventDefault();
-        toggleWorshipMode();
-      }
-    });
-
-    modeToggleBtn.addEventListener('click', toggleWorshipMode);
-
-    function toggleWorshipMode() {
-      if (!isStreaming) return;
-      currentMode = currentMode === "sermon" ? "worship" : "sermon";
-      if (currentMode === "worship") {
-        modeToggleBtn.classList.add('muted');
-        modeToggleBtn.innerText = "🎵 WORSHIP SONGS (MUTED)";
-        adminLineActive.innerHTML = '<span style="color:#f59e0b; font-weight:700;">Worship Song Mode — Subtitles Muted</span>';
+    function updateModeUI(mode, isAuto = false, reason = "") {
+      currentMode = mode;
+      if (mode === "worship") {
+        preachingModeBtn.classList.remove('active-preach');
+        worshipModeBtn.classList.add('active-worship');
+        if (isAuto) {
+          worshipStatusBanner.className = "status-banner auto-muted";
+          worshipBannerText.innerText = "🎵 AUTO-GUARD: Congregational Singing Detected — Subtitles Auto-Muted";
+          worshipBannerBadge.innerText = "AUTO-MUTED";
+          adminLineActive.innerHTML = '<span style="color:#c084fc; font-weight:700;">🎵 Congregational Singing Detected — Subtitles Auto-Muted</span>';
+        } else {
+          worshipStatusBanner.className = "status-banner muted";
+          worshipBannerText.innerText = "■ MUTED: Worship / Congregational Singing (Subtitles Suppressed)";
+          worshipBannerBadge.innerText = "MUTED";
+          adminLineActive.innerHTML = '<span style="color:#f59e0b; font-weight:700;">Worship Song Mode — Subtitles Muted</span>';
+        }
       } else {
-        modeToggleBtn.classList.remove('muted');
-        modeToggleBtn.innerText = "🎙️ SERMON MODE (ACTIVE)";
+        worshipModeBtn.classList.remove('active-worship');
+        preachingModeBtn.classList.add('active-preach');
+        worshipStatusBanner.className = "status-banner live";
+        worshipBannerText.innerText = "● LIVE BROADCAST: Pastor Preaching Captions Active";
+        worshipBannerBadge.innerText = "LIVE";
         adminLineActive.innerHTML = '<span style="color:#64748b; font-style:italic;">Listening for sermon speech...</span>';
       }
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: "set_mode", mode: currentMode }));
-      }
     }
+
+    preachingModeBtn.addEventListener('click', () => {
+      if (!isStreaming) return;
+      updateModeUI("sermon");
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: "set_mode", mode: "sermon" }));
+      }
+      showToast("🎙️ Preaching Mode Active — Live Captions Resumed", "#16a34a");
+    });
+
+    worshipModeBtn.addEventListener('click', () => {
+      if (!isStreaming) return;
+      updateModeUI("worship");
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: "set_mode", mode: "worship" }));
+      }
+      showToast("🎵 Worship Mode Active — Subtitles Muted", "#d97706");
+    });
 
     // Connect WebSocket on boot immediately
     connectWebSocket();

@@ -2,163 +2,560 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Spoken Light - OBS Livestream Overlay</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spoken Light - High-Contrast ProPresenter Overlay</title>
   <style>
     :root {
-      --font-size-active: 2.25rem;
-      --font-size-mid: 1.70rem;
+      --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      --font-size-active: 2.75rem;
+      --font-size-mid: 2.10rem;
+      --font-size-upper: 1.65rem;
       --font-size-top: 1.35rem;
+      --font-size-faint: 1.10rem;
+      --gold-primary: #fbbf24;
+      --gold-glow: rgba(245, 158, 11, 0.45);
+      --emerald-live: #10b981;
+      --worship-accent: #c084fc;
+      --text-stroke: 1.5px rgba(0, 0, 0, 0.85);
+      --text-shadow-deep: 
+        0 2px 4px rgba(0, 0, 0, 0.95),
+        0 4px 12px rgba(0, 0, 0, 0.90),
+        0 8px 24px rgba(0, 0, 0, 0.85),
+        0 0 2px #000000;
     }
-    * { box-sizing: border-box; }
-    html, body {
+
+    * {
+      box-sizing: border-box;
       margin: 0;
       padding: 0;
-      background: transparent !important;
-      overflow: hidden;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    html, body {
       width: 100vw;
       height: 100vh;
-    }
-    .caption-container {
-      position: absolute;
-      bottom: 48px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 92%;
-      max-width: 1400px;
-      text-align: center;
+      background: transparent !important;
+      overflow: hidden;
+      font-family: var(--font-family);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      text-rendering: optimizeLegibility;
       pointer-events: none;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 12px;
+      user-select: none;
     }
-    /* Scripture Lower-Third Badge */
-    .scripture-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      background: rgba(15, 23, 42, 0.94);
-      color: #fbbf24;
-      border: 1px solid rgba(251, 191, 36, 0.5);
-      border-radius: 24px;
-      padding: 6px 18px;
-      font-size: 1.15rem;
-      font-weight: 800;
-      letter-spacing: 0.02em;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8), 0 0 20px rgba(245, 158, 11, 0.25);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+
+    /* Hardware-Accelerated Viewport Shell */
+    .viewport-layer {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      transform: translate3d(0, 0, 0);
+      backface-visibility: hidden;
+    }
+
+    /* -------------------------------------------------------------
+       1. LIVE SERMON CHAPTER INDICATOR CHIP (TOP-LEFT)
+       ------------------------------------------------------------- */
+    .chapter-chip-container {
+      position: absolute;
+      top: 36px;
+      left: 48px;
+      z-index: 100;
+      transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
       opacity: 0;
-      transform: translateY(12px);
+      transform: translateY(-10px);
     }
-    .scripture-badge.visible {
+
+    .chapter-chip-container.visible {
       opacity: 1;
       transform: translateY(0);
     }
-    /* 3-Line Caption Card */
-    .caption-card {
+
+    .chapter-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 18px;
+      background: rgba(10, 14, 22, 0.88);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 9999px;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.75);
+      color: #f1f5f9;
+      font-size: 0.95rem;
+      letter-spacing: 0.02em;
+    }
+
+    .live-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--emerald-live);
+      box-shadow: 0 0 10px var(--emerald-live);
+      animation: pulseLiveDot 2s infinite cubic-bezier(0.4, 0, 0.6, 1);
+    }
+
+    @keyframes pulseLiveDot {
+      0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 10px var(--emerald-live); }
+      50% { opacity: 0.4; transform: scale(0.85); box-shadow: 0 0 3px var(--emerald-live); }
+    }
+
+    .chapter-title {
+      font-weight: 700;
+      color: #ffffff;
+      max-width: 440px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .chapter-divider {
+      width: 1px;
+      height: 14px;
+      background: rgba(255, 255, 255, 0.25);
+    }
+
+    .chapter-timer {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-weight: 600;
+      color: #cbd5e1;
+      font-size: 0.88rem;
+    }
+
+    /* -------------------------------------------------------------
+       2. WORSHIP MUTE INDICATOR PILL (TOP-RIGHT)
+       ------------------------------------------------------------- */
+    .worship-pill-container {
+      position: absolute;
+      top: 36px;
+      right: 48px;
+      z-index: 100;
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      opacity: 0;
+      transform: translateY(-10px) scale(0.96);
+    }
+
+    .worship-pill-container.visible {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+
+    .worship-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 22px;
+      background: rgba(30, 10, 54, 0.90);
+      border: 1.5px solid rgba(192, 132, 252, 0.6);
+      border-radius: 9999px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8), 0 0 20px rgba(192, 132, 252, 0.35);
+      color: #f3e8ff;
+      font-size: 0.92rem;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+    }
+
+    .worship-icon {
+      font-size: 1.15rem;
+    }
+
+    /* Mode Toast Notification */
+    .mode-toast-container {
+      position: absolute;
+      bottom: 260px;
+      left: 50%;
+      transform: translateX(-50%) translateY(14px);
+      z-index: 90;
+      opacity: 0;
+      transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .mode-toast-container.visible {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .mode-toast {
+      padding: 8px 24px;
+      background: rgba(10, 14, 22, 0.94);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 24px;
+      color: #ffffff;
+      font-size: 0.94rem;
+      font-weight: 700;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.8);
+      letter-spacing: 0.03em;
+    }
+
+    /* -------------------------------------------------------------
+       3. POP-UP SCRIPTURE ANCHOR CARD (GOLD/AMBER ACCENT)
+       ------------------------------------------------------------- */
+    .scripture-card-anchor {
+      position: absolute;
+      bottom: 220px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px) scale(0.96);
+      z-index: 95;
+      transition: all 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .scripture-card-anchor.visible {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0) scale(1);
+    }
+
+    .scripture-card {
+      position: relative;
+      overflow: hidden;
       display: inline-flex;
       flex-direction: column;
-      gap: 10px;
-      background: rgba(6, 10, 18, 0.92);
-      padding: 24px 38px;
+      align-items: center;
+      padding: 12px 36px 16px 36px;
+      background: linear-gradient(135deg, rgba(24, 16, 4, 0.94) 0%, rgba(12, 16, 24, 0.95) 100%);
+      border: 1.5px solid rgba(251, 191, 36, 0.7);
       border-radius: 18px;
-      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(0, 0, 0, 0.6);
-      border: 1px solid rgba(255, 255, 255, 0.14);
-      backdrop-filter: blur(24px);
-      -webkit-backdrop-filter: blur(24px);
-      transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1), transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-      max-width: 100%;
-      min-width: 480px;
+      box-shadow: 0 16px 44px rgba(0, 0, 0, 0.9), 0 0 28px var(--gold-glow);
+      min-width: 320px;
     }
-    .caption-line {
-      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-      line-height: 1.35;
+
+    .scripture-badge-header {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.78rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: var(--gold-primary);
+      margin-bottom: 2px;
+    }
+
+    .scripture-ref-title {
+      font-size: 1.95rem;
+      font-weight: 800;
+      color: #fffbeb;
       letter-spacing: 0.015em;
+      text-shadow: 0 0 16px rgba(251, 191, 36, 0.5), 0 2px 6px rgba(0, 0, 0, 0.95);
     }
-    .line-top {
-      color: rgba(203, 213, 225, 0.35);
-      font-size: var(--font-size-top);
+
+    .scripture-progress-track {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 3px;
+      background: rgba(251, 191, 36, 0.2);
+    }
+
+    .scripture-progress-fill {
+      height: 100%;
+      width: 100%;
+      background: linear-gradient(90deg, #f59e0b 0%, #fde68a 100%);
+      transform-origin: left;
+    }
+
+    @keyframes dismissCountdown {
+      from { transform: scaleX(1); }
+      to { transform: scaleX(0); }
+    }
+
+    /* -------------------------------------------------------------
+       4. HIGH-CONTRAST PROPRESENTER SUBTITLES (ZERO BACKGROUND BOX)
+       ------------------------------------------------------------- */
+    .caption-container {
+      position: absolute;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 94%;
+      max-width: 1560px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      z-index: 50;
+      pointer-events: none;
+    }
+
+    /* Pure typography with zero background rectangle box */
+    .caption-card {
+      background: none !important;
+      border: none !important;
+      box-shadow: none !important;
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      width: 100%;
+      transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      will-change: transform, opacity;
+    }
+
+    .caption-line {
+      line-height: 1.25;
+      letter-spacing: -0.012em;
+      word-break: break-word;
+      overflow-wrap: break-word;
+      margin: 0 auto;
+      max-width: 1400px;
+      transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* 5-Line Kinetic Opacity & Font-Scale Graduation */
+    .line-faint {
+      color: rgba(255, 255, 255, 0.22);
+      font-size: var(--font-size-faint);
       font-weight: 500;
-      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9);
+      text-shadow: var(--text-shadow-deep);
+      -webkit-text-stroke: 0.6px rgba(0, 0, 0, 0.6);
     }
-    .line-mid {
-      color: rgba(226, 232, 240, 0.70);
-      font-size: var(--font-size-mid);
+
+    .line-top {
+      color: rgba(255, 255, 255, 0.40);
+      font-size: var(--font-size-top);
       font-weight: 600;
-      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+      text-shadow: var(--text-shadow-deep);
+      -webkit-text-stroke: 0.8px rgba(0, 0, 0, 0.7);
     }
+
+    .line-upper {
+      color: rgba(255, 255, 255, 0.58);
+      font-size: var(--font-size-upper);
+      font-weight: 650;
+      text-shadow: var(--text-shadow-deep);
+      -webkit-text-stroke: 1.0px rgba(0, 0, 0, 0.75);
+    }
+
+    .line-mid {
+      color: rgba(255, 255, 255, 0.78);
+      font-size: var(--font-size-mid);
+      font-weight: 700;
+      text-shadow: var(--text-shadow-deep);
+      -webkit-text-stroke: 1.2px rgba(0, 0, 0, 0.8);
+    }
+
     .line-active {
       color: #ffffff;
       font-size: var(--font-size-active);
       font-weight: 800;
-      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.95);
+      text-shadow: var(--text-shadow-deep);
+      -webkit-text-stroke: var(--text-stroke);
+      transform: translate3d(0, 0, 0);
     }
+
     .fade-out {
       opacity: 0 !important;
       transform: translateY(16px) !important;
     }
+
     .hidden {
       display: none !important;
+    }
+
+    /* Test Banner */
+    .test-banner {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(234, 88, 12, 0.92);
+      color: #ffffff;
+      font-size: 0.75rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      padding: 3px 14px;
+      border-radius: 12px;
+      z-index: 999;
+      pointer-events: auto;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
-  <div class="caption-container">
-    <!-- POPUP SCRIPTURE ANCHOR BADGE -->
-    <div id="scriptureBadge" class="scripture-badge">
-      <span>📖</span>
-      <span id="scriptureText">John 3:16</span>
+  <div class="viewport-layer">
+    <!-- TEST BANNER (Shows only in ?test=1 mode) -->
+    <div id="testBanner" class="test-banner hidden">
+      DIAGNOSTIC TEST MODE • Keys: [T] Caption | [S] Scripture | [W] Worship | [C] Clear
     </div>
 
-    <!-- ROLLING 3-LINE CAPTION CARD -->
-    <div id="captionCard" class="caption-card fade-out">
-      <div id="lineTop" class="caption-line line-top hidden"></div>
-      <div id="lineMid" class="caption-line line-mid hidden"></div>
-      <div id="lineActive" class="caption-line line-active"></div>
+    <!-- 1. LIVE SERMON CHAPTER INDICATOR CHIP -->
+    <div id="chapterChipContainer" class="chapter-chip-container">
+      <div class="chapter-chip">
+        <div class="live-dot"></div>
+        <span id="chapterTitle" class="chapter-title">Sunday Morning Service</span>
+        <div class="chapter-divider"></div>
+        <span id="chapterTimer" class="chapter-timer">00:00:00</span>
+      </div>
+    </div>
+
+    <!-- 2. WORSHIP MUTE INDICATOR PILL -->
+    <div id="worshipPillContainer" class="worship-pill-container">
+      <div class="worship-pill">
+        <span class="worship-icon">🎵</span>
+        <span>WORSHIP MODE • SUBTITLES MUTED</span>
+      </div>
+    </div>
+
+    <!-- MODE TRANSITION TOAST -->
+    <div id="modeToastContainer" class="mode-toast-container">
+      <div id="modeToastText" class="mode-toast">🎙️ SERMON MODE • SUBTITLES LIVE</div>
+    </div>
+
+    <!-- 3. POP-UP SCRIPTURE ANCHOR CARD -->
+    <div id="scriptureCardAnchor" class="scripture-card-anchor">
+      <div class="scripture-card">
+        <div class="scripture-badge-header">
+          <span>📖</span>
+          <span>Scripture Reference</span>
+        </div>
+        <div id="scriptureRefTitle" class="scripture-ref-title">John 3:16</div>
+        <div class="scripture-progress-track">
+          <div id="scriptureProgressFill" class="scripture-progress-fill"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. HIGH-CONTRAST PROPRESENTER SUBTITLES (ZERO BACKGROUND BOX) -->
+    <div class="caption-container">
+      <div id="captionCard" class="caption-card fade-out">
+        <div id="lineFaint" class="caption-line line-faint hidden"></div>
+        <div id="lineTop" class="caption-line line-top hidden"></div>
+        <div id="lineUpper" class="caption-line line-upper hidden"></div>
+        <div id="lineMid" class="caption-line line-mid hidden"></div>
+        <div id="lineActive" class="caption-line line-active"></div>
+      </div>
     </div>
   </div>
 
   <script>
+    // URL Configuration Parameters
     const urlParams = new URLSearchParams(window.location.search);
-    const persistSeconds = parseInt(urlParams.get('persist') || '18', 10);
+    const persistSeconds = parseInt(urlParams.get('persist') || '20', 10);
     const persistMs = Math.max(4000, persistSeconds * 1000);
+    const showChipConfig = urlParams.get('chip') !== '0';
+    const scriptureDurationMs = parseInt(urlParams.get('scripture_duration') || '14', 10) * 1000;
+    const isTestParam = urlParams.get('test') === '1' || urlParams.get('demo') === '1';
 
+    // DOM Elements
     const captionCard = document.getElementById('captionCard');
+    const lineFaint = document.getElementById('lineFaint');
     const lineTop = document.getElementById('lineTop');
+    const lineUpper = document.getElementById('lineUpper');
     const lineMid = document.getElementById('lineMid');
     const lineActive = document.getElementById('lineActive');
-    const scriptureBadge = document.getElementById('scriptureBadge');
-    const scriptureText = document.getElementById('scriptureText');
 
+    const scriptureCardAnchor = document.getElementById('scriptureCardAnchor');
+    const scriptureRefTitle = document.getElementById('scriptureRefTitle');
+    const scriptureProgressFill = document.getElementById('scriptureProgressFill');
+
+    const chapterChipContainer = document.getElementById('chapterChipContainer');
+    const chapterTitleEl = document.getElementById('chapterTitle');
+    const chapterTimerEl = document.getElementById('chapterTimer');
+
+    const worshipPillContainer = document.getElementById('worshipPillContainer');
+    const modeToastContainer = document.getElementById('modeToastContainer');
+    const modeToastText = document.getElementById('modeToastText');
+    const testBanner = document.getElementById('testBanner');
+
+    // Runtime State
     let fadeTimer = null;
     let scriptureBadgeTimer = null;
+    let modeToastTimer = null;
     let ws = null;
     let sentenceStack = [];
+    let isWorshipMode = false;
+    let sermonStartTime = 0;
+    let sermonTimerInterval = null;
+    let currentChapter = "Opening & Scripture Reading";
+    let currentSermonTitle = "Sunday Morning Service";
 
+    // Format stopwatch hh:mm:ss
+    function formatTime(ms) {
+      if (!ms || ms < 0) ms = 0;
+      const totalSec = Math.floor(ms / 1000);
+      const hrs = Math.floor(totalSec / 3600);
+      const mins = Math.floor((totalSec % 3600) / 60);
+      const secs = totalSec % 60;
+      return `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    }
+
+    function startSermonTimer(startTimeMs) {
+      sermonStartTime = startTimeMs || Date.now();
+      if (sermonTimerInterval) clearInterval(sermonTimerInterval);
+      sermonTimerInterval = setInterval(() => {
+        const elapsed = Math.max(0, Date.now() - sermonStartTime);
+        chapterTimerEl.innerText = formatTime(elapsed);
+      }, 1000);
+      chapterTimerEl.innerText = formatTime(Math.max(0, Date.now() - sermonStartTime));
+      if (showChipConfig) {
+        chapterChipContainer.classList.add('visible');
+      }
+    }
+
+    function stopSermonTimer() {
+      if (sermonTimerInterval) {
+        clearInterval(sermonTimerInterval);
+        sermonTimerInterval = null;
+      }
+      chapterChipContainer.classList.remove('visible');
+    }
+
+    function updateChapterChip(title, chapterText) {
+      if (title) currentSermonTitle = title;
+      if (chapterText) currentChapter = chapterText;
+      chapterTitleEl.innerText = `${currentSermonTitle} • ${currentChapter}`;
+      if (showChipConfig) {
+        chapterChipContainer.classList.add('visible');
+      }
+    }
+
+    // Render 5-Line Subtitle Stack (Smooth Kinetic ProPresenter Graduation)
     function renderStack() {
-      if (sentenceStack.length === 0) {
+      if (sentenceStack.length === 0 || isWorshipMode) {
         clearCaptions();
         return;
       }
 
-      if (sentenceStack.length === 1) {
-        lineTop.classList.add('hidden');
-        lineMid.classList.add('hidden');
+      const count = sentenceStack.length;
+      lineFaint.classList.add('hidden');
+      lineTop.classList.add('hidden');
+      lineUpper.classList.add('hidden');
+      lineMid.classList.add('hidden');
+
+      if (count === 1) {
         lineActive.innerText = sentenceStack[0];
-      } else if (sentenceStack.length === 2) {
-        lineTop.classList.add('hidden');
+      } else if (count === 2) {
         lineMid.classList.remove('hidden');
         lineMid.innerText = sentenceStack[0];
         lineActive.innerText = sentenceStack[1];
-      } else {
-        lineTop.classList.remove('hidden');
-        lineTop.innerText = sentenceStack[0];
+      } else if (count === 3) {
+        lineUpper.classList.remove('hidden');
+        lineUpper.innerText = sentenceStack[0];
         lineMid.classList.remove('hidden');
         lineMid.innerText = sentenceStack[1];
         lineActive.innerText = sentenceStack[2];
+      } else if (count === 4) {
+        lineTop.classList.remove('hidden');
+        lineTop.innerText = sentenceStack[0];
+        lineUpper.classList.remove('hidden');
+        lineUpper.innerText = sentenceStack[1];
+        lineMid.classList.remove('hidden');
+        lineMid.innerText = sentenceStack[2];
+        lineActive.innerText = sentenceStack[3];
+      } else {
+        lineFaint.classList.remove('hidden');
+        lineFaint.innerText = sentenceStack[0];
+        lineTop.classList.remove('hidden');
+        lineTop.innerText = sentenceStack[1];
+        lineUpper.classList.remove('hidden');
+        lineUpper.innerText = sentenceStack[2];
+        lineMid.classList.remove('hidden');
+        lineMid.innerText = sentenceStack[3];
+        lineActive.innerText = sentenceStack[4];
       }
 
       captionCard.classList.remove('fade-out');
@@ -180,47 +577,124 @@
           sentenceStack = [];
           lineActive.innerText = "";
           lineMid.innerText = "";
+          lineUpper.innerText = "";
           lineTop.innerText = "";
+          lineFaint.innerText = "";
           lineMid.classList.add('hidden');
+          lineUpper.classList.add('hidden');
           lineTop.classList.add('hidden');
+          lineFaint.classList.add('hidden');
         }
-      }, 500);
+      }, 400);
     }
 
+    // Intelligent Phrase Splitting: Prevents Whisper multi-sentence dumps from bloating lines
     function pushCaption(text) {
-      if (!text || text.trim().length === 0) return;
+      if (isWorshipMode || !text || text.trim().length === 0) return;
       const clean = text.trim();
 
-      if (sentenceStack.length > 0 && sentenceStack[sentenceStack.length - 1] === clean) {
-        return;
+      // Split multi-sentence chunks if long
+      let phrases = [clean];
+      if (clean.length > 70 && /[.!?]/.test(clean)) {
+        const splitMatches = clean.match(/[^.!?]+[.!?]+|[^.!?]+$/g);
+        if (splitMatches && splitMatches.length > 1) {
+          phrases = splitMatches.map(p => p.trim()).filter(Boolean);
+        }
       }
 
-      sentenceStack.push(clean);
-      if (sentenceStack.length > 3) {
-        sentenceStack.shift();
+      for (const phrase of phrases) {
+        if (sentenceStack.length > 0 && sentenceStack[sentenceStack.length - 1] === phrase) {
+          continue;
+        }
+        sentenceStack.push(phrase);
+        if (sentenceStack.length > 5) {
+          sentenceStack.shift();
+        }
       }
 
       renderStack();
     }
 
+    // Pop-Up Scripture Anchor Card with Linear Auto-Dismiss Indicator
     function showScriptureBadge(ref) {
       if (!ref) return;
-      scriptureText.innerText = ref;
-      scriptureBadge.classList.add('visible');
+      scriptureRefTitle.innerText = ref;
+
+      scriptureProgressFill.style.animation = 'none';
+      void scriptureProgressFill.offsetWidth;
+      scriptureProgressFill.style.animation = `dismissCountdown ${scriptureDurationMs}ms linear forwards`;
+
+      scriptureCardAnchor.classList.add('visible');
 
       if (scriptureBadgeTimer) clearTimeout(scriptureBadgeTimer);
       scriptureBadgeTimer = setTimeout(() => {
-        scriptureBadge.classList.remove('visible');
-      }, 12000); // Display scripture badge for 12 seconds
+        scriptureCardAnchor.classList.remove('visible');
+      }, scriptureDurationMs);
     }
 
+    // Worship Mute Indicator State Handler
+    function handleModeChange(newMode) {
+      if (newMode === 'worship') {
+        isWorshipMode = true;
+        clearCaptions();
+        worshipPillContainer.classList.add('visible');
+        showModeToast("🎵 WORSHIP MODE • SUBTITLES MUTED", 2600);
+      } else {
+        const wasWorship = isWorshipMode;
+        isWorshipMode = false;
+        worshipPillContainer.classList.remove('visible');
+        if (wasWorship) {
+          showModeToast("🎙️ SERMON MODE • SUBTITLES LIVE", 2400);
+        }
+      }
+    }
+
+    function showModeToast(message, durationMs = 2400) {
+      modeToastText.innerText = message;
+      modeToastContainer.classList.add('visible');
+      if (modeToastTimer) clearTimeout(modeToastTimer);
+      modeToastTimer = setTimeout(() => {
+        modeToastContainer.classList.remove('visible');
+      }, durationMs);
+    }
+
+    // Diagnostic Test Harness
+    if (isTestParam) {
+      testBanner.classList.remove('hidden');
+      updateChapterChip("Sunday Morning Service", "1. Opening & Scripture Reading");
+      startSermonTimer(Date.now() - 482000);
+      pushCaption("Welcome this morning to Calvary Baptist Church.");
+      setTimeout(() => pushCaption("Turn in your Bibles with me today to John chapter 3."), 1200);
+      setTimeout(() => pushCaption("We are examining the eternal love and grace of our Lord."), 2400);
+      setTimeout(() => pushCaption("He gave His only begotten Son that whoever believes shall not perish."), 3600);
+      setTimeout(() => {
+        pushCaption("For God sent not His Son into the world to condemn the world, but that the world through Him might be saved.");
+        showScriptureBadge("John 3:16-17");
+      }, 4800);
+    }
+
+    // Global Keybindings for soundboard / testing
+    window.addEventListener('keydown', (e) => {
+      const key = e.key.toLowerCase();
+      if (key === 't') {
+        pushCaption("Test subtitle caption emitted at " + new Date().toLocaleTimeString());
+      } else if (key === 's') {
+        showScriptureBadge("Romans 8:28");
+      } else if (key === 'w') {
+        handleModeChange(isWorshipMode ? 'sermon' : 'worship');
+      } else if (key === 'c') {
+        clearCaptions();
+      }
+    });
+
+    // WebSocket Edge Pipeline Connection
     let reconnectAttempts = 0;
     let pingInterval = null;
 
     function connectWebSocket() {
       if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
       const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const roomParam = new URLSearchParams(window.location.search).get('room') || new URLSearchParams(window.location.search).get('tenant') || 'demo';
+      const roomParam = urlParams.get('room') || urlParams.get('tenant') || 'demo';
       ws = new WebSocket(`${protocol}//${location.host}/api/ws?room=${encodeURIComponent(roomParam)}`);
 
       ws.onopen = () => {
@@ -230,20 +704,40 @@
           if (ws && ws.readyState === WebSocket.OPEN) {
             ws.send("ping");
           }
-        }, 15000); // 15-second edge keepalive ping
+        }, 15000);
       };
 
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
+
           if (data.type === 'caption' && data.text) {
             pushCaption(data.text);
           } else if (data.type === 'clear') {
             clearCaptions();
-          } else if (data.type === 'mode_change' && data.mode === 'worship') {
-            clearCaptions();
+          } else if (data.type === 'mode_change') {
+            handleModeChange(data.mode);
           } else if (data.type === 'scripture_detected' && data.reference) {
             showScriptureBadge(data.reference);
+          } else if (data.type === 'chapter_slice') {
+            const chap = data.chapter;
+            if (chap) {
+              updateChapterChip(currentSermonTitle, chap.title || `Part ${chap.chapter_index}`);
+              if (chap.scripture_anchor) {
+                showScriptureBadge(chap.scripture_anchor);
+              }
+            }
+          } else if (data.type === 'status' || data.type === 'archive_status') {
+            if (data.mode) handleModeChange(data.mode);
+            if (data.title || data.currentChapter) {
+              updateChapterChip(data.title || currentSermonTitle, data.currentChapter || currentChapter);
+            }
+            if (data.isRecording) {
+              const start = (data.metadata && data.metadata.startTime) || (Date.now() - (data.elapsedMs || 0));
+              startSermonTimer(start);
+            } else if (data.isRecording === false) {
+              stopSermonTimer();
+            }
           }
         } catch (e) {
           console.error('Error handling overlay message:', e);
