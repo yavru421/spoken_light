@@ -181,6 +181,12 @@ const BIBLICAL_REPLACEMENTS = [
   [/\baltar call\b/gi, "altar call"]
 ];
 
+// Matches spoken variations (e.g. "John chapter 3 verse 16" or "Romans 8 28") and normalizes them to "John 3:16"
+const SPOKEN_SCRIPTURE_PATTERN = /\b(Genesis|Exodus|Leviticus|Numbers|Deuteronomy|Joshua|Judges|Ruth|1\s+Samuel|2\s+Samuel|1\s+Kings|2\s+Kings|1\s+Chronicles|2\s+Chronicles|Ezra|Nehemiah|Esther|Job|Psalms|Psalm|Proverbs|Ecclesiastes|Song\s+of\s+Solomon|Isaiah|Jeremiah|Lamentations|Ezekiel|Daniel|Hosea|Joel|Amos|Obadiah|Jonah|Micah|Nahum|Habakkuk|Zephaniah|Haggai|Zechariah|Malachi|Matthew|Mark|Luke|John|Acts|Romans|1\s+Corinthians|2\s+Corinthians|Galatians|Ephesians|Philippians|Colossians|1\s+Thessalonians|2\s+Thessalonians|1\s+Timothy|2\s+Timothy|Titus|Philemon|Hebrews|James|1\s+Peter|2\s+Peter|1\s+John|2\s+John|3\s+John|Jude|Revelation)\s+(?:chapter\s+)?(\d{1,3})(?:\s*,\s*|\s+)(?:verses?\s+)?(\d{1,3})\b/gi;
+
+// Matches already-formatted scripture references (e.g., "John 3:16", "Romans 8:28", "1 Corinthians 13:4-8")
+const DETECT_SCRIPTURE_PATTERN = /\b(Genesis|Exodus|Leviticus|Numbers|Deuteronomy|Joshua|Judges|Ruth|1\s+Samuel|2\s+Samuel|1\s+Kings|2\s+Kings|1\s+Chronicles|2\s+Chronicles|Ezra|Nehemiah|Esther|Job|Psalms|Psalm|Proverbs|Ecclesiastes|Song\s+of\s+Solomon|Isaiah|Jeremiah|Lamentations|Ezekiel|Daniel|Hosea|Joel|Amos|Obadiah|Jonah|Micah|Nahum|Habakkuk|Zephaniah|Haggai|Zechariah|Malachi|Matthew|Mark|Luke|John|Acts|Romans|1\s+Corinthians|2\s+Corinthians|Galatians|Ephesians|Philippians|Colossians|1\s+Thessalonians|2\s+Thessalonians|1\s+Timothy|2\s+Timothy|Titus|Philemon|Hebrews|James|1\s+Peter|2\s+Peter|1\s+John|2\s+John|3\s+John|Jude|Revelation)\s+(\d{1,3}):(\d{1,3}(?:-\d{1,3})?)\b/gi;
+
 function formatCaption(text) {
   if (!text) return "";
   let clean = text.trim().replace(/\s+/g, ' ');
@@ -190,6 +196,9 @@ function formatCaption(text) {
   for (const [pattern, replacement] of BIBLICAL_REPLACEMENTS) {
     clean = clean.replace(pattern, replacement);
   }
+
+  // Convert spoken scripture variations (e.g. "John chapter 3 verse 16" or "Romans 8 28") -> "John 3:16"
+  clean = clean.replace(SPOKEN_SCRIPTURE_PATTERN, "$1 $2:$3");
 
   clean = clean.charAt(0).toUpperCase() + clean.slice(1);
   if (clean.endsWith(',')) clean = clean.slice(0, -1);
@@ -742,11 +751,13 @@ export class CaptionDurableObject {
           }
         }
 
-        // 3. Build optimized Whisper initial prompt
+        // 3. Build optimized Whisper initial prompt with dynamic scripture biasing
         const baseTheology = "Calvary Baptist Church sermon: Gospel, Jesus Christ, Holy Spirit, Scripture, Faith, Grace, Salvation, King of Kings.";
+        const scriptureHint = this.getRecentScriptureHint();
+        const promptScripture = scriptureHint ? ` Scripture: ${scriptureHint}.` : "";
         const promptLexicon = this.d1Context ? ` ${this.d1Context}.` : "";
         const historicalMemory = slidingContext ? ` Previous: ${slidingContext}` : "";
-        const fullInitialPrompt = `${baseTheology}${promptLexicon}${historicalMemory}`.slice(0, 800);
+        const fullInitialPrompt = `${baseTheology}${promptScripture}${promptLexicon}${historicalMemory}`.slice(0, 800);
 
         // 4. Run Whisper AI inference on clean WAV
         const audioArray = Array.from(new Uint8Array(wavBuffer));
@@ -786,6 +797,46 @@ export class CaptionDurableObject {
                 if (this.env.DB) {
                   this.env.DB.prepare("INSERT INTO sermon_captions (tenant_id, sermon_id, timestamp_ms, text) VALUES (?, ?, ?, ?)")
                     .bind(this.tenantId, this.currentSermonId, elapsedMs, captionText).run().catch(console.error);
+                }
+
+                // 7. Scripture Reference Detection & Chapter Anchor Slicing
+                let match;
+                const detectRegex = new RegExp(DETECT_SCRIPTURE_PATTERN.source, 'gi');
+                while ((match = detectRegex.exec(captionText)) !== null) {
+                  const fullRef = match[0];
+                  const book = match[1];
+                  const chapterNum = parseInt(match[2], 10);
+                  const verseNum = parseInt(match[3], 10);
+
+                  // Add to recent scripture focus for prompt biasing
+                  if (!this.recentScriptures) this.recentScriptures = [];
+                  this.recentScriptures.push({ ref: fullRef, timestamp: Date.now() });
+
+                  if (!this.scripturesDetected.has(fullRef)) {
+                    this.scripturesDetected.set(fullRef, elapsedMs);
+                    if (this.env.DB) {
+                      this.env.DB.prepare("INSERT INTO sermon_scriptures (tenant_id, sermon_id, reference, book, chapter, verse, detected_at_ms) VALUES (?, ?, ?, ?, ?, ?, ?)")
+                        .bind(this.tenantId, this.currentSermonId, fullRef, book, chapterNum, verseNum, elapsedMs).run().catch(console.error);
+                    }
+                    this.broadcast({
+                      type: "scripture_detected",
+                      tenantId: this.tenantId,
+                      sermonId: this.currentSermonId,
+                      reference: fullRef,
+                      timestamp_ms: elapsedMs
+                    });
+
+                    // Scripture Chapter Slicing: Trigger new chapter anchor if at least 2 mins (120,000ms) since last chapter started
+                    if ((elapsedMs - this.currentChapterStartTimeMs) >= 120000) {
+                      this.sliceChapter(elapsedMs, `Scripture: ${fullRef}`, fullRef);
+                    }
+                  }
+                }
+
+                // 8. Temporal Chapter Slicing (5-minute intervals = 300,000ms)
+                if ((elapsedMs - this.currentChapterStartTimeMs) >= 300000) {
+                  const minutesMark = Math.floor(elapsedMs / 60000);
+                  this.sliceChapter(elapsedMs, `Message - Part ${this.currentChapterIndex + 1} (${minutesMark}m mark)`, null);
                 }
               }
 
@@ -978,10 +1029,48 @@ export class CaptionDurableObject {
       return;
     }
 
-
   }
 
-  async synthesizeSermon(sermonId, metadata, captions, scriptures = [], tenantId = "calvary") {
+  sliceChapter(elapsedMs, title, scriptureAnchor = null) {
+    if (!this.isRecordingArchive || !this.currentSermonId) return;
+
+    const prevIndex = this.currentChapterIndex;
+    const prevChapter = this.sermonChapters[this.sermonChapters.length - 1];
+    if (prevChapter) {
+      prevChapter.end_time_ms = elapsedMs;
+    }
+    if (this.env.DB) {
+      this.env.DB.prepare("UPDATE sermon_chapters SET end_time_ms = ? WHERE sermon_id = ? AND chapter_index = ?")
+        .bind(elapsedMs, this.currentSermonId, prevIndex).run().catch(console.error);
+    }
+
+    this.currentChapterIndex++;
+    this.currentChapterStartTimeMs = elapsedMs;
+    this.currentChapterTitle = title;
+    this.currentChapterAnchor = scriptureAnchor;
+
+    const newChapter = {
+      chapter_index: this.currentChapterIndex,
+      title,
+      start_time_ms: elapsedMs,
+      end_time_ms: null,
+      scripture_anchor: scriptureAnchor
+    };
+    this.sermonChapters.push(newChapter);
+
+    if (this.env.DB) {
+      this.env.DB.prepare("INSERT INTO sermon_chapters (tenant_id, sermon_id, chapter_index, title, start_time_ms, scripture_anchor) VALUES (?, ?, ?, ?, ?, ?)")
+        .bind(this.tenantId, this.currentSermonId, this.currentChapterIndex, title, elapsedMs, scriptureAnchor).run().catch(console.error);
+    }
+
+    this.broadcast({
+      type: "chapter_slice",
+      sermonId: this.currentSermonId,
+      chapter: newChapter
+    });
+  }
+
+  async synthesizeSermon(sermonId, metadata, captions, scriptures = [], chapters = [], tenantId = "calvary") {
     try {
       const durationSec = Math.max(1, Math.round((Date.now() - metadata.startTime) / 1000));
       const fullText = captions.map(c => c.text).join(" ");
@@ -995,7 +1084,7 @@ export class CaptionDurableObject {
 
       if (wordCount >= 20) {
         try {
-          const prompt = `You are an assistant for ${tenantId === 'calvary' ? 'Calvary Baptist Church' : 'Christian Church Ministry'}. Summarize the following sermon in 2-3 sentences, and provide 3 key biblical takeaways as bullet points.\n\nSpeaker: ${metadata.speaker}\nTitle: ${metadata.title}\n\nTranscript:\n${fullText.slice(0, 7000)}\n\nFormat your response strictly as valid JSON with keys "summary" (string) and "key_points" (array of strings). Do NOT include code block markdown or any other text.`;
+          const prompt = `You are an assistant for ${tenantId === 'calvary' ? 'Calvary Baptist Church' : 'Christian Church Ministry'}. Summarize the following sermon in 2-3 sentences, and provide 3 key biblical takeaways as bullet points.\n\nSpeaker: ${metadata.speaker}\nTitle: ${metadata.title}\nScriptures: ${scriptures.join(", ") || "None specified"}\n\nTranscript:\n${fullText.slice(0, 7000)}\n\nFormat your response strictly as valid JSON with keys "summary" (string) and "key_points" (array of strings). Do NOT include code block markdown or any other text.`;
           
           const aiRes = await this.env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
             prompt,
@@ -1032,6 +1121,8 @@ export class CaptionDurableObject {
         durationSeconds: durationSec,
         wordCount,
         wpm,
+        scriptures,
+        chapters,
         summary,
         keyPoints: JSON.parse(keyPointsJson)
       });
