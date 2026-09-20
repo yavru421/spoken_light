@@ -442,6 +442,8 @@ export class CaptionDurableObject {
     this.tablesEnsured = false;
     this.recentScriptures = [];
     this.d1ContextFetchedAt = 0;
+    this.overlayStyle = "broadcast";
+    this.overlayScale = 1.0;
   }
 
   getRecentScriptureHint() {
@@ -571,7 +573,9 @@ export class CaptionDurableObject {
         mode: this.currentMode,
         isRecording: this.isRecordingArchive,
         sermonId: this.currentSermonId,
-        currentChapter: this.currentChapterTitle
+        currentChapter: this.currentChapterTitle,
+        overlayStyle: this.overlayStyle,
+        overlayScale: this.overlayScale
       }));
       return new Response(null, { status: 101, webSocket: client });
     }
@@ -1235,6 +1239,17 @@ export class CaptionDurableObject {
         if (cmd.type === "clear") {
           this.lastTranscription = "";
           this.broadcast({ type: "clear", reason: "manual" });
+          return;
+        }
+
+        if (cmd.type === "set_overlay_style") {
+          if (cmd.style) this.overlayStyle = cmd.style;
+          if (typeof cmd.scale === "number") this.overlayScale = cmd.scale;
+          this.broadcast({
+            type: "overlay_style",
+            style: this.overlayStyle,
+            scale: this.overlayScale
+          });
           return;
         }
 

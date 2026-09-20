@@ -464,151 +464,6 @@
       -webkit-text-stroke: var(--text-stroke) !important;
     }
 
-    /* -------------------------------------------------------------
-       5. FLOATING QUICK SETTINGS HUD (AUTO-HIDES ON IDLE)
-       Reveals on mouse movement / OBS Interact, fades after 3.5s
-       ------------------------------------------------------------- */
-    .quick-settings-hud {
-      position: absolute;
-      top: 18px;
-      right: 18px;
-      z-index: 1000;
-      background: rgba(12, 16, 26, 0.94);
-      border: 1.5px solid rgba(255, 255, 255, 0.18);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border-radius: 16px;
-      padding: 12px 16px;
-      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.85), 0 0 1px rgba(255, 255, 255, 0.3);
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      opacity: 0;
-      pointer-events: none;
-      transform: translateY(-8px);
-      transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-      width: 460px;
-      max-width: calc(100vw - 36px);
-    }
-    .quick-settings-hud.visible {
-      opacity: 1;
-      pointer-events: auto;
-      transform: translateY(0);
-    }
-    .hud-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .hud-title {
-      font-size: 0.85rem;
-      font-weight: 800;
-      color: #f1f5f9;
-      letter-spacing: 0.03em;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .hud-badge {
-      font-size: 0.70rem;
-      font-weight: 800;
-      background: rgba(37, 99, 235, 0.25);
-      border: 1px solid rgba(59, 130, 246, 0.5);
-      color: #93c5fd;
-      padding: 2px 8px;
-      border-radius: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-    .hud-styles {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-    }
-    .hud-btn {
-      background: rgba(255, 255, 255, 0.06);
-      border: 1px solid rgba(255, 255, 255, 0.14);
-      color: #cbd5e1;
-      border-radius: 8px;
-      padding: 7px 11px;
-      font-size: 0.78rem;
-      font-weight: 700;
-      cursor: pointer;
-      transition: all 0.15s ease;
-      font-family: inherit;
-      user-select: none;
-    }
-    .hud-btn:hover {
-      background: rgba(255, 255, 255, 0.16);
-      color: #ffffff;
-      border-color: rgba(255, 255, 255, 0.3);
-    }
-    .hud-btn.active {
-      background: #2563eb !important;
-      color: #ffffff !important;
-      border-color: #60a5fa !important;
-      box-shadow: 0 0 14px rgba(37, 99, 235, 0.55);
-    }
-    .hud-footer {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding-top: 6px;
-      border-top: 1px solid rgba(255, 255, 255, 0.08);
-      font-size: 0.75rem;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-    .hud-scale-group, .hud-action-group {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .hud-scale-label {
-      color: #94a3b8;
-      font-weight: 700;
-      font-size: 0.74rem;
-    }
-    .hud-scale-btn, .hud-action-btn {
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(255, 255, 255, 0.16);
-      color: #e2e8f0;
-      border-radius: 6px;
-      padding: 3px 9px;
-      font-size: 0.75rem;
-      font-weight: 700;
-      cursor: pointer;
-      font-family: inherit;
-      transition: all 0.15s ease;
-      user-select: none;
-    }
-    .hud-scale-btn:hover, .hud-action-btn:hover {
-      background: rgba(255, 255, 255, 0.2);
-      color: #ffffff;
-    }
-    .hud-scale-val {
-      color: #f8fafc;
-      font-weight: 800;
-      min-width: 40px;
-      text-align: center;
-      font-family: ui-monospace, SFMono-Regular, monospace;
-      font-size: 0.78rem;
-    }
-    .hud-hint {
-      font-size: 0.68rem;
-      color: #64748b;
-      line-height: 1.4;
-      margin-top: -2px;
-    }
-    .hud-hint kbd {
-      background: rgba(255, 255, 255, 0.1);
-      border: 1px solid rgba(255, 255, 255, 0.16);
-      border-radius: 3px;
-      padding: 1px 4px;
-      font-family: ui-monospace, SFMono-Regular, monospace;
-      color: #94a3b8;
-    }
-
     /* Test Banner */
     .test-banner {
       position: absolute;
@@ -630,35 +485,6 @@
 </head>
 <body>
   <div class="viewport-layer">
-    <!-- FLOATING QUICK SETTINGS HUD (AUTO-HIDES ON IDLE, NEVER APPEARS ON LIVE STREAM UNLESS INTERACTED WITH) -->
-    <div id="quickSettingsHud" class="quick-settings-hud">
-      <div class="hud-header">
-        <span class="hud-title">✨ Caption Display Style</span>
-        <span class="hud-badge" id="hudActiveLabel">BROADCAST</span>
-      </div>
-      <div class="hud-styles">
-        <button type="button" class="hud-btn active" data-style="broadcast" title="Modern Frosted Glass Lower-Third (Recommended)">📺 Broadcast</button>
-        <button type="button" class="hud-btn" data-style="subtitles" title="Clean 2-Line Closed Caption Box">💬 Subtitles</button>
-        <button type="button" class="hud-btn" data-style="minimal" title="Frameless 2-Line High-Contrast Typography">🔲 Minimal</button>
-        <button type="button" class="hud-btn" data-style="single" title="Single-Line Floating Pill">➖ Single-Line</button>
-        <button type="button" class="hud-btn" data-style="crawl" title="Original 5-Line Star Wars Crawl">🚀 Kinetic Crawl</button>
-      </div>
-      <div class="hud-footer">
-        <div class="hud-scale-group">
-          <span class="hud-scale-label">Size:</span>
-          <button type="button" class="hud-scale-btn" id="btnScaleDown" title="Decrease font size">A−</button>
-          <span id="scaleLabel" class="hud-scale-val">100%</span>
-          <button type="button" class="hud-scale-btn" id="btnScaleUp" title="Increase font size">A+</button>
-        </div>
-        <div class="hud-action-group">
-          <button type="button" class="hud-action-btn" id="btnHudTest" title="Preview sample caption">⚡ Test Sample</button>
-          <button type="button" class="hud-action-btn" id="btnHudClear" title="Clear captions">Clear</button>
-        </div>
-      </div>
-      <div class="hud-hint">
-        Hover mouse or press <kbd>O</kbd> to toggle • Hotkeys: <kbd>1</kbd>–<kbd>5</kbd> switch style • <kbd>[</kbd> / <kbd>]</kbd> size
-      </div>
-    </div>
 
     <!-- TEST BANNER (Shows only in ?test=1 mode) -->
     <div id="testBanner" class="test-banner hidden">
@@ -829,13 +655,6 @@
       STYLES.forEach(s => document.body.classList.remove(`style-${s}`));
       document.body.classList.add(`style-${currentStyle}`);
 
-      // Update HUD buttons & badge
-      document.querySelectorAll('.hud-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.getAttribute('data-style') === currentStyle);
-      });
-      const hudActiveLabel = document.getElementById('hudActiveLabel');
-      if (hudActiveLabel) hudActiveLabel.innerText = STYLE_LABELS[currentStyle] || currentStyle.toUpperCase();
-
       renderStack();
     }
 
@@ -843,8 +662,6 @@
       currentScale = Math.round(Math.max(0.75, Math.min(1.5, scale)) * 100) / 100;
       localStorage.setItem('spoken_light_overlay_scale', currentScale);
       document.documentElement.style.setProperty('--caption-scale', currentScale);
-      const scaleLabel = document.getElementById('scaleLabel');
-      if (scaleLabel) scaleLabel.innerText = `${Math.round(currentScale * 100)}%`;
     }
 
     // Adaptive Multi-Mode Caption Renderer
@@ -1022,127 +839,14 @@
       }, 4800);
     }
 
-    // Floating Quick Settings HUD Controller (Auto-Hides on Idle)
-    const quickSettingsHud = document.getElementById('quickSettingsHud');
-    let hudHideTimer = null;
-    let isHudForcePinned = false;
-
-    function showHud() {
-      if (!quickSettingsHud) return;
-      quickSettingsHud.classList.add('visible');
-      if (hudHideTimer) clearTimeout(hudHideTimer);
-      if (!isHudForcePinned) {
-        hudHideTimer = setTimeout(() => {
-          quickSettingsHud.classList.remove('visible');
-        }, 3500);
-      }
-    }
-
-    function hideHud() {
-      if (!quickSettingsHud || isHudForcePinned) return;
-      quickSettingsHud.classList.remove('visible');
-    }
-
-    window.addEventListener('mousemove', showHud);
-
-    if (quickSettingsHud) {
-      quickSettingsHud.addEventListener('mouseenter', () => {
-        if (hudHideTimer) clearTimeout(hudHideTimer);
-      });
-
-      quickSettingsHud.addEventListener('mouseleave', () => {
-        if (!isHudForcePinned) {
-          hudHideTimer = setTimeout(hideHud, 1400);
-        }
-      });
-
-      // Style Preset Button Clicks
-      document.querySelectorAll('.hud-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const targetStyle = btn.getAttribute('data-style');
-          applyStyle(targetStyle);
-          showHud();
-        });
-      });
-
-      // Font Size Scale Controls
-      const btnScaleDown = document.getElementById('btnScaleDown');
-      const btnScaleUp = document.getElementById('btnScaleUp');
-      if (btnScaleDown) {
-        btnScaleDown.addEventListener('click', (e) => {
-          e.stopPropagation();
-          applyScale(currentScale - 0.05);
-          showHud();
-        });
-      }
-      if (btnScaleUp) {
-        btnScaleUp.addEventListener('click', (e) => {
-          e.stopPropagation();
-          applyScale(currentScale + 0.05);
-          showHud();
-        });
-      }
-
-      // Quick Test & Clear Action Buttons
-      const btnHudTest = document.getElementById('btnHudTest');
-      const btnHudClear = document.getElementById('btnHudClear');
-      if (btnHudTest) {
-        btnHudTest.addEventListener('click', (e) => {
-          e.stopPropagation();
-          pushCaption("For God so loved the world that He gave His only begotten Son.");
-          setTimeout(() => {
-            pushCaption("That whosoever believeth in Him should not perish, but have everlasting life.");
-          }, 900);
-          showHud();
-        });
-      }
-      if (btnHudClear) {
-        btnHudClear.addEventListener('click', (e) => {
-          e.stopPropagation();
-          clearCaptions();
-          showHud();
-        });
-      }
-    }
-
     // Initialize Active Style and Scale immediately
     applyStyle(currentStyle);
     applyScale(currentScale);
 
-    // Global Keybindings for soundboard / testing / style switching
+    // Global Keybindings for testing (Clean - zero on-screen HUD popups)
     window.addEventListener('keydown', (e) => {
       const key = e.key.toLowerCase();
-      if (key === '1') {
-        applyStyle('broadcast');
-        showHud();
-      } else if (key === '2') {
-        applyStyle('subtitles');
-        showHud();
-      } else if (key === '3') {
-        applyStyle('minimal');
-        showHud();
-      } else if (key === '4') {
-        applyStyle('single');
-        showHud();
-      } else if (key === '5') {
-        applyStyle('crawl');
-        showHud();
-      } else if (key === '[') {
-        applyScale(currentScale - 0.05);
-        showHud();
-      } else if (key === ']') {
-        applyScale(currentScale + 0.05);
-        showHud();
-      } else if (key === 'o' || key === 'h') {
-        isHudForcePinned = !isHudForcePinned;
-        if (isHudForcePinned) {
-          quickSettingsHud.classList.add('visible');
-          if (hudHideTimer) clearTimeout(hudHideTimer);
-        } else {
-          showHud();
-        }
-      } else if (key === 't') {
+      if (key === 't') {
         pushCaption("Test subtitle caption emitted at " + new Date().toLocaleTimeString());
       } else if (key === 's') {
         showScriptureBadge("Romans 8:28");
@@ -1183,6 +887,9 @@
             clearCaptions();
           } else if (data.type === 'mode_change') {
             handleModeChange(data.mode);
+          } else if (data.type === 'overlay_style') {
+            if (data.style) applyStyle(data.style);
+            if (typeof data.scale === 'number') applyScale(data.scale);
           } else if (data.type === 'scripture_detected' && data.reference) {
             showScriptureBadge(data.reference);
           } else if (data.type === 'chapter_slice') {
@@ -1195,6 +902,8 @@
             }
           } else if (data.type === 'status' || data.type === 'archive_status') {
             if (data.mode) handleModeChange(data.mode);
+            if (data.overlayStyle) applyStyle(data.overlayStyle);
+            if (typeof data.overlayScale === 'number') applyScale(data.overlayScale);
             if (data.title || data.currentChapter) {
               updateChapterChip(data.title || currentSermonTitle, data.currentChapter || currentChapter);
             }

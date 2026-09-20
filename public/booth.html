@@ -352,6 +352,56 @@
       z-index: 9999;
       display: none;
     }
+
+    /* OBS Caption Overlay Styling Card Controls */
+    .booth-style-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 10px;
+    }
+    .booth-style-btn {
+      background: #0d1527;
+      border: 1.5px solid #1f2937;
+      border-radius: 10px;
+      padding: 12px 8px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 4px;
+      transition: all 0.15s ease;
+      color: #cbd5e1;
+      user-select: none;
+    }
+    .booth-style-btn:hover {
+      background: #1e293b;
+      border-color: #3b82f6;
+      color: #ffffff;
+    }
+    .booth-style-btn.active {
+      background: rgba(59, 130, 246, 0.22);
+      border-color: #3b82f6;
+      box-shadow: 0 0 16px rgba(59, 130, 246, 0.4);
+      color: #ffffff;
+    }
+    .style-btn-icon {
+      font-size: 1.25rem;
+    }
+    .style-btn-title {
+      font-size: 0.88rem;
+      font-weight: 800;
+      color: #f8fafc;
+      letter-spacing: 0.02em;
+    }
+    .style-btn-desc {
+      font-size: 0.70rem;
+      color: #94a3b8;
+      line-height: 1.2;
+    }
+    .booth-style-btn.active .style-btn-title {
+      color: #60a5fa;
+    }
   </style>
 </head>
 <body>
@@ -456,6 +506,70 @@
         </div>
       </div>
 
+      <!-- OBS LIVESTREAM CAPTION OVERLAY STYLING CARD -->
+      <div class="archive-card" style="border-color:#3b82f6; background:#0b1120;">
+        <div class="archive-header">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span style="font-size:1.35rem;">📺</span>
+            <div>
+              <div style="font-size:0.98rem; font-weight:800; color:#ffffff;">OBS Stream Caption Overlay Styling</div>
+              <div style="font-size:0.78rem; color:var(--muted);">Select display preset and sizing for the live broadcast overlay. Syncs instantly to OBS in real-time.</div>
+            </div>
+          </div>
+          <div id="activeStyleBadge" style="font-size:0.75rem; font-weight:800; padding:4px 12px; border-radius:20px; background:#1e3a8a; color:#93c5fd; letter-spacing:0.04em;">
+            STYLE: BROADCAST (100%)
+          </div>
+        </div>
+
+        <!-- 5 Style Preset Buttons -->
+        <div class="booth-style-grid">
+          <button type="button" class="booth-style-btn active" data-style="broadcast">
+            <span class="style-btn-icon">📺</span>
+            <span class="style-btn-title">Broadcast</span>
+            <span class="style-btn-desc">Glass Capsule • 1–2 Lines</span>
+          </button>
+          <button type="button" class="booth-style-btn" data-style="subtitles">
+            <span class="style-btn-icon">🔲</span>
+            <span class="style-btn-title">Subtitles</span>
+            <span class="style-btn-desc">Classic CC Box • 2 Lines</span>
+          </button>
+          <button type="button" class="booth-style-btn" data-style="minimal">
+            <span class="style-btn-icon">🔤</span>
+            <span class="style-btn-title">Minimal</span>
+            <span class="style-btn-desc">Frameless ProPresenter</span>
+          </button>
+          <button type="button" class="booth-style-btn" data-style="single">
+            <span class="style-btn-icon">➖</span>
+            <span class="style-btn-title">Single-Line</span>
+            <span class="style-btn-desc">1-Line Compact Ticker</span>
+          </button>
+          <button type="button" class="booth-style-btn" data-style="crawl">
+            <span class="style-btn-icon">🚀</span>
+            <span class="style-btn-title">Kinetic Crawl</span>
+            <span class="style-btn-desc">5-Line Velocity Stack</span>
+          </button>
+        </div>
+
+        <!-- Scale & Test Stream Controls -->
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; padding-top:6px; border-top:1px solid #1f2937;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:0.8rem; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em;">Font Size:</span>
+            <button type="button" id="btnScaleDown" class="btn-action" style="padding:4px 12px; font-size:0.9rem; font-weight:800;">A−</button>
+            <span id="scaleLabel" style="font-family:monospace; font-size:0.95rem; font-weight:800; color:#60a5fa; min-width:48px; text-align:center;">100%</span>
+            <button type="button" id="btnScaleUp" class="btn-action" style="padding:4px 12px; font-size:0.9rem; font-weight:800;">A+</button>
+            <button type="button" id="btnScaleReset" class="btn-action" style="padding:4px 10px; font-size:0.75rem;">Reset</button>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <button type="button" id="btnTestOverlayCaption" class="btn-action" style="background:#1e3a8a; border-color:#3b82f6; color:#ffffff; font-weight:700;">
+              ⚡ Test Caption in Stream
+            </button>
+            <button type="button" id="btnClearOverlayStream" class="btn-action" style="font-size:0.8rem;">
+              🧹 Clear Overlay
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div style="display:flex; flex-direction:column; gap:8px;">
         <div style="display:flex; justify-content:space-between; font-size:0.8rem; color:var(--muted);">
           <span>Soundboard Input Device:</span>
@@ -550,6 +664,138 @@
       setTimeout(() => { toast.style.display = 'none'; }, 3500);
     }
 
+    // OBS Caption Overlay Styling & Sizing State
+    const STYLES = ['broadcast', 'subtitles', 'minimal', 'single', 'crawl'];
+    const STYLE_LABELS = {
+      broadcast: 'BROADCAST',
+      subtitles: 'SUBTITLES',
+      minimal: 'MINIMAL',
+      single: 'SINGLE-LINE',
+      crawl: 'KINETIC CRAWL'
+    };
+
+    let currentOverlayStyle = localStorage.getItem('spoken_light_overlay_style') || 'broadcast';
+    let currentOverlayScale = parseFloat(localStorage.getItem('spoken_light_overlay_scale') || '1.0');
+    if (isNaN(currentOverlayScale) || currentOverlayScale < 0.75 || currentOverlayScale > 1.5) currentOverlayScale = 1.0;
+
+    const activeStyleBadge = document.getElementById('activeStyleBadge');
+    const scaleLabel = document.getElementById('scaleLabel');
+    const btnScaleDown = document.getElementById('btnScaleDown');
+    const btnScaleUp = document.getElementById('btnScaleUp');
+    const btnScaleReset = document.getElementById('btnScaleReset');
+    const btnTestOverlayCaption = document.getElementById('btnTestOverlayCaption');
+    const btnClearOverlayStream = document.getElementById('btnClearOverlayStream');
+    const boothStyleButtons = document.querySelectorAll('.booth-style-btn');
+
+    function updateOverlayUIState(style, scale) {
+      if (style) currentOverlayStyle = style;
+      if (typeof scale === 'number') {
+        currentOverlayScale = Math.round(Math.max(0.75, Math.min(1.5, scale)) * 100) / 100;
+      }
+
+      localStorage.setItem('spoken_light_overlay_style', currentOverlayStyle);
+      localStorage.setItem('spoken_light_overlay_scale', currentOverlayScale);
+
+      // Update active button state
+      boothStyleButtons.forEach(btn => {
+        if (btn.getAttribute('data-style') === currentOverlayStyle) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+
+      // Update badge and scale percentage
+      const label = STYLE_LABELS[currentOverlayStyle] || currentOverlayStyle.toUpperCase();
+      const pct = Math.round(currentOverlayScale * 100);
+      if (activeStyleBadge) {
+        activeStyleBadge.innerText = `STYLE: ${label} (${pct}%)`;
+      }
+      if (scaleLabel) {
+        scaleLabel.innerText = `${pct}%`;
+      }
+    }
+
+    function broadcastOverlaySettings(style, scale) {
+      updateOverlayUIState(style, scale);
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+          type: "set_overlay_style",
+          style: currentOverlayStyle,
+          scale: currentOverlayScale
+        }));
+      }
+    }
+
+    // Style button clicks
+    boothStyleButtons.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const targetStyle = btn.getAttribute('data-style');
+        broadcastOverlaySettings(targetStyle, currentOverlayScale);
+        showToast(`📺 OBS Caption Style set to: ${targetStyle.toUpperCase()}`);
+      });
+    });
+
+    // Font size scale controls
+    if (btnScaleDown) {
+      btnScaleDown.addEventListener('click', (e) => {
+        e.preventDefault();
+        broadcastOverlaySettings(currentOverlayStyle, currentOverlayScale - 0.05);
+      });
+    }
+    if (btnScaleUp) {
+      btnScaleUp.addEventListener('click', (e) => {
+        e.preventDefault();
+        broadcastOverlaySettings(currentOverlayStyle, currentOverlayScale + 0.05);
+      });
+    }
+    if (btnScaleReset) {
+      btnScaleReset.addEventListener('click', (e) => {
+        e.preventDefault();
+        broadcastOverlaySettings(currentOverlayStyle, 1.0);
+        showToast("Font size reset to 100%");
+      });
+    }
+
+    // Test Caption in Stream Button
+    if (btnTestOverlayCaption) {
+      btnTestOverlayCaption.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({
+            type: "test_caption",
+            text: "For God so loved the world that He gave His only begotten Son."
+          }));
+          setTimeout(() => {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({
+                type: "test_caption",
+                text: "That whosoever believeth in Him should not perish, but have everlasting life."
+              }));
+            }
+          }, 1100);
+          showToast("⚡ Sample subtitle dispatched to OBS stream overlay");
+        } else {
+          showToast("⚠️ WebSocket not connected yet", "#dc2626");
+        }
+      });
+    }
+
+    // Clear Overlay Button
+    if (btnClearOverlayStream) {
+      btnClearOverlayStream.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: "clear" }));
+          showToast("🧹 OBS stream overlay cleared");
+        }
+      });
+    }
+
+    // Initialize UI with stored style and scale immediately
+    updateOverlayUIState(currentOverlayStyle, currentOverlayScale);
+
     armArchiveToggle.addEventListener('change', () => {
       isArchiveArmed = armArchiveToggle.checked;
       if (isArchiveArmed) {
@@ -573,7 +819,7 @@
     });
 
     copyObsBtn.addEventListener('click', () => {
-      const overlayUrl = `${window.location.origin}/overlay?room=${encodeURIComponent(activeRoom)}`;
+      const overlayUrl = `${window.location.origin}/overlay?room=${encodeURIComponent(activeRoom)}&style=${encodeURIComponent(currentOverlayStyle)}&scale=${encodeURIComponent(currentOverlayScale)}`;
       navigator.clipboard.writeText(overlayUrl).then(() => {
         showToast("Copied OBS Overlay Link: " + overlayUrl);
       }).catch(() => {
@@ -918,6 +1164,15 @@
           }
         }, 25000);
 
+        // Sync booth's active overlay styling with the DO room
+        if (currentOverlayStyle) {
+          ws.send(JSON.stringify({
+            type: "set_overlay_style",
+            style: currentOverlayStyle,
+            scale: currentOverlayScale
+          }));
+        }
+
         if (isStreaming && isArchiveArmed && !isRecordingArchive) {
           startArchiveRecording();
         }
@@ -928,6 +1183,10 @@
           const data = JSON.parse(event.data);
           if (data.type === 'pong') {
             return; // Heartbeat healthy
+          } else if (data.type === 'overlay_style') {
+            updateOverlayUIState(data.style, data.scale);
+          } else if (data.type === 'status') {
+            if (data.overlayStyle) updateOverlayUIState(data.overlayStyle, data.overlayScale);
           } else if (data.type === 'caption' && data.text) {
             pushAdminCaption(data.text);
           } else if (data.type === 'clear') {
