@@ -6,3 +6,6 @@ build/
 *.log
 *.mp4
 test/*.mp4
+audio/
+*.m4a
+*.wav
