@@ -813,19 +813,27 @@ export class CaptionDurableObject {
         const scriptures = [];
 
         if (wordCount >= 20 && this.env.AI) {
-          const prompt = `You are an assistant for ${sermon.tenant_id === 'calvary' ? 'Calvary Baptist Church' : 'Christian Church Ministry'}. Summarize the following sermon in 2-3 sentences, provide 3 key biblical takeaways as bullet points, and extract all biblical scriptures or passages referenced or read (e.g. "James 3:1-12", "James 1:27", "1 Kings 20:11", "Matthew 18:6").\n\nSpeaker: ${sermon.speaker}\nTitle: ${sermon.title}\n\nTranscript:\n${captionsText.slice(0, 7000)}\n\nFormat your response strictly as valid JSON with keys "summary" (string), "key_points" (array of strings), and "scriptures" (array of strings, e.g. ["James 3:1-12", "James 1:27"]). Do NOT include code block markdown or any other text.`;
-          const aiResponse = await runWorkersAi(this.env, prompt, 512);
+          const prompt = `You are an assistant for ${sermon.tenant_id === 'calvary' ? 'Calvary Baptist Church' : 'Christian Church Ministry'}. Extract 2-3 direct verbatim quotes spoken by the pastor/speaker that summarize the message of the sermon, provide 3 key biblical takeaways as bullet points, and extract all biblical scriptures or passages referenced or read (e.g. "James 3:1-12", "James 1:27", "1 Kings 20:11", "Matthew 18:6").\n\nCRITICAL INVARIANT: The summary MUST NOT be an AI interpretation, paraphrase, or synthetic commentary. The summary MUST consist ONLY of direct, word-for-word verbatim quotes spoken by ${sermon.speaker || 'the pastor'} extracted directly from the provided transcript (each quote enclosed in quotation marks). Every sentence in the summary must be an exact quote from the speaker.\n\nSpeaker: ${sermon.speaker}\nTitle: ${sermon.title}\n\nTranscript:\n${captionsText.slice(0, 7000)}\n\nFormat your response strictly as valid JSON with keys "summary" (string containing ONLY direct verbatim quotes in quotation marks), "key_points" (array of strings), and "scriptures" (array of strings, e.g. ["James 3:1-12", "James 1:27"]). Do NOT include code block markdown or any other text.`;
+          const aiResponse = await runWorkersAi(this.env, prompt, 1024);
           if (aiResponse) {
             try {
-              const cleaned = aiResponse.trim().replace(/^```json\s*/i, '').replace(/\s*```$/i, '').trim();
+              let cleaned = aiResponse.trim().replace(/^```json\s*/i, '').replace(/\s*```$/i, '').trim();
+              cleaned = cleaned.replace(/:\s*`([\s\S]*?)`\s*(,|})/g, (m, g, end) => `: ${JSON.stringify(g)}${end}`);
               const parsed = JSON.parse(cleaned);
-              if (parsed.summary) summary = parsed.summary;
+              if (parsed.summary) {
+                summary = Array.isArray(parsed.summary) ? parsed.summary.join(" ") : String(parsed.summary);
+              }
               if (Array.isArray(parsed.key_points)) keyPointsJson = JSON.stringify(parsed.key_points);
               if (Array.isArray(parsed.scriptures)) {
                 parsed.scriptures.forEach(s => { if (s && typeof s === 'string') scriptures.push(s.trim()); });
               }
             } catch {
-              summary = aiResponse.slice(0, 500);
+              const matchSum = aiResponse.match(/"summary"\s*:\s*[`"']?([\s\S]*?)(?:[`"']\s*(?:,|\n\s*"|\})|$)/i);
+              if (matchSum && matchSum[1]) {
+                summary = matchSum[1].trim().replace(/^["']|["']$/g, '');
+              } else {
+                summary = aiResponse.slice(0, 500);
+              }
             }
           }
         }
@@ -863,10 +871,10 @@ export class CaptionDurableObject {
           const chWords = chText.split(/\s+/).filter(Boolean);
           if (chWords.length >= 15 && this.env.AI) {
             try {
-              const chPrompt = `You are a pastoral study assistant for ${sermon.tenant_id === 'calvary' ? 'Calvary Baptist Church' : 'Christian Church Ministry'}.\nWrite a concise 1-sentence biblical/pastoral anchor summary for this sermon chapter segment.\n\nChapter Title: ${ch.title}\n${ch.scripture_anchor ? `Scripture Anchor: ${ch.scripture_anchor}\n` : ''}Transcript:\n${chText.slice(0, 3000)}\n\nRespond with ONLY the 1-sentence summary, no quotes, no markdown, no filler.`;
+              const chPrompt = `You are a pastoral study assistant for ${sermon.tenant_id === 'calvary' ? 'Calvary Baptist Church' : 'Christian Church Ministry'}.\nExtract 1 concise direct verbatim quote spoken by the pastor/speaker in this chapter segment that anchors the biblical teaching.\n\nCRITICAL INVARIANT: The summary MUST be an exact, word-for-word quote spoken by ${sermon.speaker || 'the speaker'} from the transcript, enclosed in quotation marks. Do NOT paraphrase, summarize, or add external commentary.\n\nChapter Title: ${ch.title}\n${ch.scripture_anchor ? `Scripture Anchor: ${ch.scripture_anchor}\n` : ''}Transcript:\n${chText.slice(0, 3000)}\n\nRespond with ONLY the exact direct verbatim quote spoken by the speaker, enclosed in quotation marks. No markdown, no filler.`;
               const chAiRes = await runWorkersAi(this.env, chPrompt, 120);
               if (chAiRes) {
-                const chSummary = chAiRes.trim().replace(/^["']|["']$/g, '');
+                const chSummary = chAiRes.trim();
                 await this.env.DB.prepare("UPDATE sermon_chapters SET summary = ? WHERE sermon_id = ? AND chapter_index = ?")
                   .bind(chSummary, sermonId, ch.chapter_index).run();
               }
@@ -1393,21 +1401,29 @@ export class CaptionDurableObject {
 
       if (wordCount >= 20) {
         try {
-          const prompt = `You are an assistant for ${tenantId === 'calvary' ? 'Calvary Baptist Church' : 'Christian Church Ministry'}. Summarize the following sermon in 2-3 sentences, provide 3 key biblical takeaways as bullet points, and extract all biblical scriptures or passages referenced or read (e.g. "James 3:1-12", "James 1:27", "1 Kings 20:11", "Matthew 18:6").\n\nSpeaker: ${metadata.speaker}\nTitle: ${metadata.title}\nScriptures: ${scriptures.join(", ") || "None specified"}\n\nTranscript:\n${fullText.slice(0, 7000)}\n\nFormat your response strictly as valid JSON with keys "summary" (string), "key_points" (array of strings), and "scriptures" (array of strings). Do NOT include code block markdown or any other text.`;
+          const prompt = `You are an assistant for ${tenantId === 'calvary' ? 'Calvary Baptist Church' : 'Christian Church Ministry'}. Extract 2-3 direct verbatim quotes spoken by the pastor/speaker that summarize the message of the sermon, provide 3 key biblical takeaways as bullet points, and extract all biblical scriptures or passages referenced or read (e.g. "James 3:1-12", "James 1:27", "1 Kings 20:11", "Matthew 18:6").\n\nCRITICAL INVARIANT: The summary MUST NOT be an AI interpretation, paraphrase, or synthetic commentary. The summary MUST consist ONLY of direct, word-for-word verbatim quotes spoken by ${metadata.speaker || 'the pastor'} extracted directly from the provided transcript (each quote enclosed in quotation marks). Every sentence in the summary must be an exact quote from the speaker.\n\nSpeaker: ${metadata.speaker}\nTitle: ${metadata.title}\nScriptures: ${scriptures.join(", ") || "None specified"}\n\nTranscript:\n${fullText.slice(0, 7000)}\n\nFormat your response strictly as valid JSON with keys "summary" (string containing ONLY direct verbatim quotes in quotation marks), "key_points" (array of strings), and "scriptures" (array of strings). Do NOT include code block markdown or any other text.`;
           
           const aiResponse = await runWorkersAi(this.env, prompt, 512);
 
           if (aiResponse) {
             try {
-              const cleaned = aiResponse.trim().replace(/^```json\s*/i, '').replace(/\s*```$/i, '').trim();
+              let cleaned = aiResponse.trim().replace(/^```json\s*/i, '').replace(/\s*```$/i, '').trim();
+              cleaned = cleaned.replace(/:\s*`([\s\S]*?)`\s*(,|})/g, (m, g, end) => `: ${JSON.stringify(g)}${end}`);
               const parsed = JSON.parse(cleaned);
-              if (parsed.summary) summary = parsed.summary;
+              if (parsed.summary) {
+                summary = Array.isArray(parsed.summary) ? parsed.summary.join(" ") : String(parsed.summary);
+              }
               if (Array.isArray(parsed.key_points)) keyPointsJson = JSON.stringify(parsed.key_points);
               if (Array.isArray(parsed.scriptures)) {
                 parsed.scriptures.forEach(s => { if (s && typeof s === 'string') scriptures.push(s.trim()); });
               }
             } catch (jsonErr) {
-              summary = aiResponse.slice(0, 500);
+              const matchSum = aiResponse.match(/"summary"\s*:\s*[`"']([\s\S]*?)[`"']\s*(?:,\s*"|\n\s*})/i);
+              if (matchSum && matchSum[1]) {
+                summary = matchSum[1].trim();
+              } else {
+                summary = aiResponse.slice(0, 500);
+              }
             }
           }
         } catch (aiErr) {
@@ -1530,21 +1546,29 @@ export default {
         // 2. Synthesize overall sermon summary and extract scriptures with Workers AI
         if (wordCount >= 20 && env.AI) {
           try {
-            const prompt = `You are an assistant for ${tenantId === 'calvary' ? 'Calvary Baptist Church' : 'Christian Church Ministry'}. Summarize the following sermon in 2-3 sentences, provide 3 key biblical takeaways as bullet points, and extract all biblical scriptures or passages referenced or read (e.g. "James 3:1-12", "James 1:27", "1 Kings 20:11", "Matthew 18:6").\n\nSpeaker: ${speaker}\nTitle: ${title}\n\nTranscript:\n${captionsText.slice(0, 7000)}\n\nFormat your response strictly as valid JSON with keys "summary" (string), "key_points" (array of strings), and "scriptures" (array of strings, e.g. ["James 3:1-12", "James 1:27"]). Do NOT include code block markdown or any other text.`;
+            const prompt = `You are an assistant for ${tenantId === 'calvary' ? 'Calvary Baptist Church' : 'Christian Church Ministry'}. Extract 2-3 direct verbatim quotes spoken by the pastor/speaker that summarize the message of the sermon, provide 3 key biblical takeaways as bullet points, and extract all biblical scriptures or passages referenced or read (e.g. "James 3:1-12", "James 1:27", "1 Kings 20:11", "Matthew 18:6").\n\nCRITICAL INVARIANT: The summary MUST NOT be an AI interpretation, paraphrase, or synthetic commentary. The summary MUST consist ONLY of direct, word-for-word verbatim quotes spoken by ${speaker || 'the pastor'} extracted directly from the provided transcript (each quote enclosed in quotation marks). Every sentence in the summary must be an exact quote from the speaker.\n\nSpeaker: ${speaker}\nTitle: ${title}\n\nTranscript:\n${captionsText.slice(0, 7000)}\n\nFormat your response strictly as valid JSON with keys "summary" (string containing ONLY direct verbatim quotes in quotation marks), "key_points" (array of strings), and "scriptures" (array of strings, e.g. ["James 3:1-12", "James 1:27"]). Do NOT include code block markdown or any other text.`;
 
             const aiResponse = await runWorkersAi(env, prompt, 512);
 
             if (aiResponse) {
-              const cleaned = aiResponse.trim().replace(/^```json\s*/i, '').replace(/\s*```$/i, '').trim();
               try {
+                let cleaned = aiResponse.trim().replace(/^```json\s*/i, '').replace(/\s*```$/i, '').trim();
+                cleaned = cleaned.replace(/:\s*`([\s\S]*?)`\s*(,|})/g, (m, g, end) => `: ${JSON.stringify(g)}${end}`);
                 const parsed = JSON.parse(cleaned);
-                if (parsed.summary) summary = parsed.summary;
+                if (parsed.summary) {
+                  summary = Array.isArray(parsed.summary) ? parsed.summary.join(" ") : String(parsed.summary);
+                }
                 if (Array.isArray(parsed.key_points)) keyPointsJson = JSON.stringify(parsed.key_points);
                 if (Array.isArray(parsed.scriptures)) {
                   parsed.scriptures.forEach(s => { if (s && typeof s === 'string') scriptures.push(s.trim()); });
                 }
               } catch {
-                summary = aiResponse.slice(0, 500);
+                const matchSum = aiResponse.match(/"summary"\s*:\s*[`"']([\s\S]*?)[`"']\s*(?:,\s*"|\n\s*})/i);
+                if (matchSum && matchSum[1]) {
+                  summary = matchSum[1].trim();
+                } else {
+                  summary = aiResponse.slice(0, 500);
+                }
               }
             }
           } catch (aiErr) {
@@ -1599,18 +1623,20 @@ export default {
             if (chWords.length >= 15) {
               try {
                 const chPrompt = `You are a pastoral study assistant for ${tenantId === 'calvary' ? 'Calvary Baptist Church' : 'Christian Church Ministry'}.
-Write a concise 1-sentence biblical/pastoral anchor summary for this sermon chapter segment.
+Extract 1 concise direct verbatim quote spoken by the pastor/speaker in this chapter segment that anchors the biblical teaching.
+
+CRITICAL INVARIANT: The chapter summary MUST be an exact, word-for-word quote spoken by ${speaker || 'the speaker'} from the transcript, enclosed in quotation marks. Do NOT paraphrase, summarize, or add external commentary.
 
 Chapter Title: ${ch.title}
 ${ch.scripture_anchor ? `Scripture Anchor: ${ch.scripture_anchor}\n` : ''}Transcript:
 ${chText.slice(0, 3000)}
 
-Respond with ONLY the 1-sentence summary, no quotes, no markdown, no filler.`;
+Respond with ONLY the exact direct verbatim quote spoken by the speaker, enclosed in quotation marks. No markdown, no filler.`;
 
                 const chAiRes = await runWorkersAi(env, chPrompt, 120);
 
                 if (chAiRes) {
-                  const chSummary = chAiRes.trim().replace(/^["']|["']$/g, '');
+                  const chSummary = chAiRes.trim();
                   await env.DB.prepare("UPDATE sermon_chapters SET summary = ? WHERE sermon_id = ? AND chapter_index = ?")
                     .bind(chSummary, sermonId, ch.chapter_index).run();
                   ch.summary = chSummary;

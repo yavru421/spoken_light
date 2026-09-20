@@ -54,21 +54,10 @@
     }
 
     /* -------------------------------------------------------------
-       1. LIVE SERMON CHAPTER INDICATOR CHIP (TOP-LEFT)
+       1. LIVE SERMON CHAPTER INDICATOR CHIP (TOP-LEFT) - HOTFIX: PERMANENTLY HIDDEN
        ------------------------------------------------------------- */
     .chapter-chip-container {
-      position: absolute;
-      top: 36px;
-      left: 48px;
-      z-index: 100;
-      transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-      opacity: 0;
-      transform: translateY(-10px);
-    }
-
-    .chapter-chip-container.visible {
-      opacity: 1;
-      transform: translateY(0);
+      display: none !important;
     }
 
     .chapter-chip {
@@ -261,11 +250,11 @@
     }
 
     /* -------------------------------------------------------------
-       4. HIGH-CONTRAST PROPRESENTER SUBTITLES (ZERO BACKGROUND BOX)
+       4. ADAPTIVE CAPTION DISPLAY MODES (BROADCAST, SUBTITLES, MINIMAL, SINGLE, CRAWL)
        ------------------------------------------------------------- */
     .caption-container {
       position: absolute;
-      bottom: 40px;
+      bottom: 36px;
       left: 50%;
       transform: translateX(-50%);
       width: 94%;
@@ -278,82 +267,346 @@
       pointer-events: none;
     }
 
-    /* Pure typography with zero background rectangle box */
     .caption-card {
+      padding: 0;
+      margin: 0;
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1), transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      will-change: transform, opacity;
+      pointer-events: none;
+    }
+
+    .caption-line {
+      line-height: 1.30;
+      letter-spacing: -0.012em;
+      word-break: break-word;
+      overflow-wrap: break-word;
+      margin: 0 auto;
+      text-align: center;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .fade-out {
+      opacity: 0 !important;
+      transform: translateY(14px) !important;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* -------------------------------------------------------------
+       STYLE PRESET 1: MODERN BROADCAST CAPSULE (DEFAULT / RECOMMENDED)
+       Ultra-sleek frosted glass lower-third, 1-2 lines, high legibility
+       ------------------------------------------------------------- */
+    .style-broadcast .caption-card {
+      background: rgba(10, 14, 24, 0.82) !important;
+      backdrop-filter: blur(18px) saturate(180%) !important;
+      -webkit-backdrop-filter: blur(18px) saturate(180%) !important;
+      border: 1.5px solid rgba(255, 255, 255, 0.16) !important;
+      border-radius: 22px !important;
+      padding: 16px 36px 18px 36px !important;
+      box-shadow: 0 16px 44px rgba(0, 0, 0, 0.75), 0 0 1px rgba(255, 255, 255, 0.25) !important;
+      max-width: 1440px !important;
+      gap: 6px !important;
+    }
+    .style-broadcast .line-mid {
+      color: rgba(255, 255, 255, 0.72) !important;
+      font-size: calc(2.05rem * var(--caption-scale, 1)) !important;
+      font-weight: 600 !important;
+      -webkit-text-stroke: 0.8px rgba(0, 0, 0, 0.6) !important;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7) !important;
+    }
+    .style-broadcast .line-active {
+      color: #ffffff !important;
+      font-size: calc(2.40rem * var(--caption-scale, 1)) !important;
+      font-weight: 750 !important;
+      -webkit-text-stroke: 1.0px rgba(0, 0, 0, 0.7) !important;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8) !important;
+      transform: translate3d(0, 0, 0);
+    }
+
+    /* -------------------------------------------------------------
+       STYLE PRESET 2: CLASSIC CLEAN SUBTITLES (CLOSED CAPTION / CC)
+       Standard cinema / YouTube CC dark pill box, 2 lines max, uniform font
+       ------------------------------------------------------------- */
+    .style-subtitles .caption-card {
+      background: rgba(0, 0, 0, 0.88) !important;
+      border: 1px solid rgba(255, 255, 255, 0.12) !important;
+      border-radius: 12px !important;
+      padding: 14px 30px !important;
+      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.9) !important;
+      max-width: 1400px !important;
+      gap: 6px !important;
+    }
+    .style-subtitles .line-mid {
+      color: rgba(255, 255, 255, 0.88) !important;
+      font-size: calc(2.20rem * var(--caption-scale, 1)) !important;
+      font-weight: 700 !important;
+      -webkit-text-stroke: 0.8px rgba(0, 0, 0, 0.7) !important;
+      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.95) !important;
+    }
+    .style-subtitles .line-active {
+      color: #ffffff !important;
+      font-size: calc(2.25rem * var(--caption-scale, 1)) !important;
+      font-weight: 750 !important;
+      -webkit-text-stroke: 0.8px rgba(0, 0, 0, 0.8) !important;
+      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.95) !important;
+    }
+
+    /* -------------------------------------------------------------
+       STYLE PRESET 3: FRAMELESS MINIMAL (PROPRESENTER 2-LINE)
+       Pure typography, zero background box, deep drop shadow & stroke
+       ------------------------------------------------------------- */
+    .style-minimal .caption-card {
       background: none !important;
       border: none !important;
       box-shadow: none !important;
       backdrop-filter: none !important;
       -webkit-backdrop-filter: none !important;
-      padding: 0;
-      margin: 0;
+      padding: 0 !important;
+      width: 100% !important;
+      gap: 8px !important;
+    }
+    .style-minimal .line-mid {
+      color: rgba(255, 255, 255, 0.75) !important;
+      font-size: calc(2.05rem * var(--caption-scale, 1)) !important;
+      font-weight: 700 !important;
+      -webkit-text-stroke: 1.4px rgba(0, 0, 0, 0.9) !important;
+      text-shadow: var(--text-shadow-deep) !important;
+    }
+    .style-minimal .line-active {
+      color: #ffffff !important;
+      font-size: calc(2.65rem * var(--caption-scale, 1)) !important;
+      font-weight: 800 !important;
+      -webkit-text-stroke: 1.6px rgba(0, 0, 0, 0.95) !important;
+      text-shadow: var(--text-shadow-deep) !important;
+    }
+
+    /* -------------------------------------------------------------
+       STYLE PRESET 4: SINGLE-LINE TICKER (ULTRA-COMPACT)
+       Exactly 1 line, floating capsule pill, maximum screen clearance
+       ------------------------------------------------------------- */
+    .style-single .caption-card {
+      background: rgba(10, 14, 24, 0.84) !important;
+      backdrop-filter: blur(16px) !important;
+      -webkit-backdrop-filter: blur(16px) !important;
+      border: 1.5px solid rgba(255, 255, 255, 0.16) !important;
+      border-radius: 9999px !important;
+      padding: 12px 34px !important;
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.75) !important;
+      max-width: 1400px !important;
+    }
+    .style-single .line-mid,
+    .style-single .line-upper,
+    .style-single .line-top,
+    .style-single .line-faint {
+      display: none !important;
+    }
+    .style-single .line-active {
+      color: #ffffff !important;
+      font-size: calc(2.35rem * var(--caption-scale, 1)) !important;
+      font-weight: 750 !important;
+      -webkit-text-stroke: 0.9px rgba(0, 0, 0, 0.7) !important;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7) !important;
+    }
+
+    /* -------------------------------------------------------------
+       STYLE PRESET 5: KINETIC CRAWL (ORIGINAL 5-LINE STAR WARS STYLE)
+       Graduated multi-line scaling and opacity stack
+       ------------------------------------------------------------- */
+    .style-crawl .caption-card {
+      background: none !important;
+      border: none !important;
+      box-shadow: none !important;
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+      padding: 0 !important;
+      width: 100% !important;
+      gap: 10px !important;
+    }
+    .style-crawl .line-faint {
+      color: rgba(255, 255, 255, 0.22) !important;
+      font-size: calc(var(--font-size-faint) * var(--caption-scale, 1)) !important;
+      font-weight: 500 !important;
+      text-shadow: var(--text-shadow-deep) !important;
+      -webkit-text-stroke: 0.6px rgba(0, 0, 0, 0.6) !important;
+    }
+    .style-crawl .line-top {
+      color: rgba(255, 255, 255, 0.40) !important;
+      font-size: calc(var(--font-size-top) * var(--caption-scale, 1)) !important;
+      font-weight: 600 !important;
+      text-shadow: var(--text-shadow-deep) !important;
+      -webkit-text-stroke: 0.8px rgba(0, 0, 0, 0.7) !important;
+    }
+    .style-crawl .line-upper {
+      color: rgba(255, 255, 255, 0.58) !important;
+      font-size: calc(var(--font-size-upper) * var(--caption-scale, 1)) !important;
+      font-weight: 650 !important;
+      text-shadow: var(--text-shadow-deep) !important;
+      -webkit-text-stroke: 1.0px rgba(0, 0, 0, 0.75) !important;
+    }
+    .style-crawl .line-mid {
+      color: rgba(255, 255, 255, 0.78) !important;
+      font-size: calc(var(--font-size-mid) * var(--caption-scale, 1)) !important;
+      font-weight: 700 !important;
+      text-shadow: var(--text-shadow-deep) !important;
+      -webkit-text-stroke: 1.2px rgba(0, 0, 0, 0.8) !important;
+    }
+    .style-crawl .line-active {
+      color: #ffffff !important;
+      font-size: calc(var(--font-size-active) * var(--caption-scale, 1)) !important;
+      font-weight: 800 !important;
+      text-shadow: var(--text-shadow-deep) !important;
+      -webkit-text-stroke: var(--text-stroke) !important;
+    }
+
+    /* -------------------------------------------------------------
+       5. FLOATING QUICK SETTINGS HUD (AUTO-HIDES ON IDLE)
+       Reveals on mouse movement / OBS Interact, fades after 3.5s
+       ------------------------------------------------------------- */
+    .quick-settings-hud {
+      position: absolute;
+      top: 18px;
+      right: 18px;
+      z-index: 1000;
+      background: rgba(12, 16, 26, 0.94);
+      border: 1.5px solid rgba(255, 255, 255, 0.18);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-radius: 16px;
+      padding: 12px 16px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.85), 0 0 1px rgba(255, 255, 255, 0.3);
       display: flex;
       flex-direction: column;
       gap: 10px;
-      width: 100%;
-      transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-      will-change: transform, opacity;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(-8px);
+      transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      width: 460px;
+      max-width: calc(100vw - 36px);
     }
-
-    .caption-line {
-      line-height: 1.25;
-      letter-spacing: -0.012em;
-      word-break: break-word;
-      overflow-wrap: break-word;
-      margin: 0 auto;
-      max-width: 1400px;
-      transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    .quick-settings-hud.visible {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateY(0);
     }
-
-    /* 5-Line Kinetic Opacity & Font-Scale Graduation */
-    .line-faint {
-      color: rgba(255, 255, 255, 0.22);
-      font-size: var(--font-size-faint);
-      font-weight: 500;
-      text-shadow: var(--text-shadow-deep);
-      -webkit-text-stroke: 0.6px rgba(0, 0, 0, 0.6);
+    .hud-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
-
-    .line-top {
-      color: rgba(255, 255, 255, 0.40);
-      font-size: var(--font-size-top);
-      font-weight: 600;
-      text-shadow: var(--text-shadow-deep);
-      -webkit-text-stroke: 0.8px rgba(0, 0, 0, 0.7);
-    }
-
-    .line-upper {
-      color: rgba(255, 255, 255, 0.58);
-      font-size: var(--font-size-upper);
-      font-weight: 650;
-      text-shadow: var(--text-shadow-deep);
-      -webkit-text-stroke: 1.0px rgba(0, 0, 0, 0.75);
-    }
-
-    .line-mid {
-      color: rgba(255, 255, 255, 0.78);
-      font-size: var(--font-size-mid);
-      font-weight: 700;
-      text-shadow: var(--text-shadow-deep);
-      -webkit-text-stroke: 1.2px rgba(0, 0, 0, 0.8);
-    }
-
-    .line-active {
-      color: #ffffff;
-      font-size: var(--font-size-active);
+    .hud-title {
+      font-size: 0.85rem;
       font-weight: 800;
-      text-shadow: var(--text-shadow-deep);
-      -webkit-text-stroke: var(--text-stroke);
-      transform: translate3d(0, 0, 0);
+      color: #f1f5f9;
+      letter-spacing: 0.03em;
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
-
-    .fade-out {
-      opacity: 0 !important;
-      transform: translateY(16px) !important;
+    .hud-badge {
+      font-size: 0.70rem;
+      font-weight: 800;
+      background: rgba(37, 99, 235, 0.25);
+      border: 1px solid rgba(59, 130, 246, 0.5);
+      color: #93c5fd;
+      padding: 2px 8px;
+      border-radius: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
     }
-
-    .hidden {
-      display: none !important;
+    .hud-styles {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .hud-btn {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      color: #cbd5e1;
+      border-radius: 8px;
+      padding: 7px 11px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      font-family: inherit;
+      user-select: none;
+    }
+    .hud-btn:hover {
+      background: rgba(255, 255, 255, 0.16);
+      color: #ffffff;
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+    .hud-btn.active {
+      background: #2563eb !important;
+      color: #ffffff !important;
+      border-color: #60a5fa !important;
+      box-shadow: 0 0 14px rgba(37, 99, 235, 0.55);
+    }
+    .hud-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 6px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      font-size: 0.75rem;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .hud-scale-group, .hud-action-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .hud-scale-label {
+      color: #94a3b8;
+      font-weight: 700;
+      font-size: 0.74rem;
+    }
+    .hud-scale-btn, .hud-action-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      color: #e2e8f0;
+      border-radius: 6px;
+      padding: 3px 9px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+    .hud-scale-btn:hover, .hud-action-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+      color: #ffffff;
+    }
+    .hud-scale-val {
+      color: #f8fafc;
+      font-weight: 800;
+      min-width: 40px;
+      text-align: center;
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      font-size: 0.78rem;
+    }
+    .hud-hint {
+      font-size: 0.68rem;
+      color: #64748b;
+      line-height: 1.4;
+      margin-top: -2px;
+    }
+    .hud-hint kbd {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 3px;
+      padding: 1px 4px;
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      color: #94a3b8;
     }
 
     /* Test Banner */
@@ -377,13 +630,43 @@
 </head>
 <body>
   <div class="viewport-layer">
+    <!-- FLOATING QUICK SETTINGS HUD (AUTO-HIDES ON IDLE, NEVER APPEARS ON LIVE STREAM UNLESS INTERACTED WITH) -->
+    <div id="quickSettingsHud" class="quick-settings-hud">
+      <div class="hud-header">
+        <span class="hud-title">✨ Caption Display Style</span>
+        <span class="hud-badge" id="hudActiveLabel">BROADCAST</span>
+      </div>
+      <div class="hud-styles">
+        <button type="button" class="hud-btn active" data-style="broadcast" title="Modern Frosted Glass Lower-Third (Recommended)">📺 Broadcast</button>
+        <button type="button" class="hud-btn" data-style="subtitles" title="Clean 2-Line Closed Caption Box">💬 Subtitles</button>
+        <button type="button" class="hud-btn" data-style="minimal" title="Frameless 2-Line High-Contrast Typography">🔲 Minimal</button>
+        <button type="button" class="hud-btn" data-style="single" title="Single-Line Floating Pill">➖ Single-Line</button>
+        <button type="button" class="hud-btn" data-style="crawl" title="Original 5-Line Star Wars Crawl">🚀 Kinetic Crawl</button>
+      </div>
+      <div class="hud-footer">
+        <div class="hud-scale-group">
+          <span class="hud-scale-label">Size:</span>
+          <button type="button" class="hud-scale-btn" id="btnScaleDown" title="Decrease font size">A−</button>
+          <span id="scaleLabel" class="hud-scale-val">100%</span>
+          <button type="button" class="hud-scale-btn" id="btnScaleUp" title="Increase font size">A+</button>
+        </div>
+        <div class="hud-action-group">
+          <button type="button" class="hud-action-btn" id="btnHudTest" title="Preview sample caption">⚡ Test Sample</button>
+          <button type="button" class="hud-action-btn" id="btnHudClear" title="Clear captions">Clear</button>
+        </div>
+      </div>
+      <div class="hud-hint">
+        Hover mouse or press <kbd>O</kbd> to toggle • Hotkeys: <kbd>1</kbd>–<kbd>5</kbd> switch style • <kbd>[</kbd> / <kbd>]</kbd> size
+      </div>
+    </div>
+
     <!-- TEST BANNER (Shows only in ?test=1 mode) -->
     <div id="testBanner" class="test-banner hidden">
       DIAGNOSTIC TEST MODE • Keys: [T] Caption | [S] Scripture | [W] Worship | [C] Clear
     </div>
 
-    <!-- 1. LIVE SERMON CHAPTER INDICATOR CHIP -->
-    <div id="chapterChipContainer" class="chapter-chip-container">
+    <!-- 1. LIVE SERMON CHAPTER INDICATOR CHIP (HOTFIX: DISABLED) -->
+    <div id="chapterChipContainer" class="chapter-chip-container" style="display: none !important;">
       <div class="chapter-chip">
         <div class="live-dot"></div>
         <span id="chapterTitle" class="chapter-title">Sunday Morning Service</span>
@@ -436,7 +719,7 @@
     const urlParams = new URLSearchParams(window.location.search);
     const persistSeconds = parseInt(urlParams.get('persist') || '20', 10);
     const persistMs = Math.max(4000, persistSeconds * 1000);
-    const showChipConfig = urlParams.get('chip') !== '0';
+    const showChipConfig = false; // HOTFIX: Top Sunday Morning Service message bar permanently disabled
     const scriptureDurationMs = parseInt(urlParams.get('scripture_duration') || '14', 10) * 1000;
     const isTestParam = urlParams.get('test') === '1' || urlParams.get('demo') === '1';
 
@@ -513,7 +796,58 @@
       }
     }
 
-    // Render 5-Line Subtitle Stack (Smooth Kinetic ProPresenter Graduation)
+    // Caption Style & Typography State Management
+    const STYLES = ['broadcast', 'subtitles', 'minimal', 'single', 'crawl'];
+    const STYLE_LABELS = {
+      broadcast: 'BROADCAST',
+      subtitles: 'SUBTITLES',
+      minimal: 'MINIMAL',
+      single: 'SINGLE-LINE',
+      crawl: 'KINETIC CRAWL'
+    };
+
+    function normalizeStyle(s) {
+      if (!s) return 'broadcast';
+      s = s.toLowerCase().trim();
+      if (s === 'starwars' || s === 'legacy') return 'crawl';
+      if (s === 'cc' || s === 'classic') return 'subtitles';
+      if (s === 'frameless' || s === 'propresenter') return 'minimal';
+      if (s === 'ticker' || s === 'oneline' || s === '1line') return 'single';
+      if (s === 'capsule' || s === 'modern') return 'broadcast';
+      return STYLES.includes(s) ? s : 'broadcast';
+    }
+
+    let currentStyle = normalizeStyle(urlParams.get('style') || localStorage.getItem('spoken_light_overlay_style') || 'broadcast');
+    let currentScale = parseFloat(urlParams.get('scale') || localStorage.getItem('spoken_light_overlay_scale') || '1.0');
+    if (isNaN(currentScale) || currentScale < 0.75 || currentScale > 1.5) currentScale = 1.0;
+
+    function applyStyle(styleName) {
+      currentStyle = normalizeStyle(styleName);
+      localStorage.setItem('spoken_light_overlay_style', currentStyle);
+
+      // Clean old classes on body and assign new
+      STYLES.forEach(s => document.body.classList.remove(`style-${s}`));
+      document.body.classList.add(`style-${currentStyle}`);
+
+      // Update HUD buttons & badge
+      document.querySelectorAll('.hud-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-style') === currentStyle);
+      });
+      const hudActiveLabel = document.getElementById('hudActiveLabel');
+      if (hudActiveLabel) hudActiveLabel.innerText = STYLE_LABELS[currentStyle] || currentStyle.toUpperCase();
+
+      renderStack();
+    }
+
+    function applyScale(scale) {
+      currentScale = Math.round(Math.max(0.75, Math.min(1.5, scale)) * 100) / 100;
+      localStorage.setItem('spoken_light_overlay_scale', currentScale);
+      document.documentElement.style.setProperty('--caption-scale', currentScale);
+      const scaleLabel = document.getElementById('scaleLabel');
+      if (scaleLabel) scaleLabel.innerText = `${Math.round(currentScale * 100)}%`;
+    }
+
+    // Adaptive Multi-Mode Caption Renderer
     function renderStack() {
       if (sentenceStack.length === 0 || isWorshipMode) {
         clearCaptions();
@@ -526,36 +860,51 @@
       lineUpper.classList.add('hidden');
       lineMid.classList.add('hidden');
 
-      if (count === 1) {
-        lineActive.innerText = sentenceStack[0];
-      } else if (count === 2) {
-        lineMid.classList.remove('hidden');
-        lineMid.innerText = sentenceStack[0];
-        lineActive.innerText = sentenceStack[1];
-      } else if (count === 3) {
-        lineUpper.classList.remove('hidden');
-        lineUpper.innerText = sentenceStack[0];
-        lineMid.classList.remove('hidden');
-        lineMid.innerText = sentenceStack[1];
-        lineActive.innerText = sentenceStack[2];
-      } else if (count === 4) {
-        lineTop.classList.remove('hidden');
-        lineTop.innerText = sentenceStack[0];
-        lineUpper.classList.remove('hidden');
-        lineUpper.innerText = sentenceStack[1];
-        lineMid.classList.remove('hidden');
-        lineMid.innerText = sentenceStack[2];
-        lineActive.innerText = sentenceStack[3];
+      if (currentStyle === 'single') {
+        // Mode 4: Single-Line Ticker (Only latest spoken sentence/phrase)
+        lineActive.innerText = sentenceStack[count - 1];
+      } else if (currentStyle === 'crawl') {
+        // Mode 5: Original 5-Line Star Wars Kinetic Crawl
+        if (count === 1) {
+          lineActive.innerText = sentenceStack[0];
+        } else if (count === 2) {
+          lineMid.classList.remove('hidden');
+          lineMid.innerText = sentenceStack[0];
+          lineActive.innerText = sentenceStack[1];
+        } else if (count === 3) {
+          lineUpper.classList.remove('hidden');
+          lineUpper.innerText = sentenceStack[0];
+          lineMid.classList.remove('hidden');
+          lineMid.innerText = sentenceStack[1];
+          lineActive.innerText = sentenceStack[2];
+        } else if (count === 4) {
+          lineTop.classList.remove('hidden');
+          lineTop.innerText = sentenceStack[0];
+          lineUpper.classList.remove('hidden');
+          lineUpper.innerText = sentenceStack[1];
+          lineMid.classList.remove('hidden');
+          lineMid.innerText = sentenceStack[2];
+          lineActive.innerText = sentenceStack[3];
+        } else {
+          lineFaint.classList.remove('hidden');
+          lineFaint.innerText = sentenceStack[0];
+          lineTop.classList.remove('hidden');
+          lineTop.innerText = sentenceStack[1];
+          lineUpper.classList.remove('hidden');
+          lineUpper.innerText = sentenceStack[2];
+          lineMid.classList.remove('hidden');
+          lineMid.innerText = sentenceStack[3];
+          lineActive.innerText = sentenceStack[4];
+        }
       } else {
-        lineFaint.classList.remove('hidden');
-        lineFaint.innerText = sentenceStack[0];
-        lineTop.classList.remove('hidden');
-        lineTop.innerText = sentenceStack[1];
-        lineUpper.classList.remove('hidden');
-        lineUpper.innerText = sentenceStack[2];
-        lineMid.classList.remove('hidden');
-        lineMid.innerText = sentenceStack[3];
-        lineActive.innerText = sentenceStack[4];
+        // Modes 1, 2, 3: Broadcast, Subtitles, Minimal (Max 2 lines - Clean, standard, no Star Wars crawl!)
+        if (count === 1) {
+          lineActive.innerText = sentenceStack[0];
+        } else {
+          lineMid.classList.remove('hidden');
+          lineMid.innerText = sentenceStack[count - 2];
+          lineActive.innerText = sentenceStack[count - 1];
+        }
       }
 
       captionCard.classList.remove('fade-out');
@@ -673,10 +1022,127 @@
       }, 4800);
     }
 
-    // Global Keybindings for soundboard / testing
+    // Floating Quick Settings HUD Controller (Auto-Hides on Idle)
+    const quickSettingsHud = document.getElementById('quickSettingsHud');
+    let hudHideTimer = null;
+    let isHudForcePinned = false;
+
+    function showHud() {
+      if (!quickSettingsHud) return;
+      quickSettingsHud.classList.add('visible');
+      if (hudHideTimer) clearTimeout(hudHideTimer);
+      if (!isHudForcePinned) {
+        hudHideTimer = setTimeout(() => {
+          quickSettingsHud.classList.remove('visible');
+        }, 3500);
+      }
+    }
+
+    function hideHud() {
+      if (!quickSettingsHud || isHudForcePinned) return;
+      quickSettingsHud.classList.remove('visible');
+    }
+
+    window.addEventListener('mousemove', showHud);
+
+    if (quickSettingsHud) {
+      quickSettingsHud.addEventListener('mouseenter', () => {
+        if (hudHideTimer) clearTimeout(hudHideTimer);
+      });
+
+      quickSettingsHud.addEventListener('mouseleave', () => {
+        if (!isHudForcePinned) {
+          hudHideTimer = setTimeout(hideHud, 1400);
+        }
+      });
+
+      // Style Preset Button Clicks
+      document.querySelectorAll('.hud-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const targetStyle = btn.getAttribute('data-style');
+          applyStyle(targetStyle);
+          showHud();
+        });
+      });
+
+      // Font Size Scale Controls
+      const btnScaleDown = document.getElementById('btnScaleDown');
+      const btnScaleUp = document.getElementById('btnScaleUp');
+      if (btnScaleDown) {
+        btnScaleDown.addEventListener('click', (e) => {
+          e.stopPropagation();
+          applyScale(currentScale - 0.05);
+          showHud();
+        });
+      }
+      if (btnScaleUp) {
+        btnScaleUp.addEventListener('click', (e) => {
+          e.stopPropagation();
+          applyScale(currentScale + 0.05);
+          showHud();
+        });
+      }
+
+      // Quick Test & Clear Action Buttons
+      const btnHudTest = document.getElementById('btnHudTest');
+      const btnHudClear = document.getElementById('btnHudClear');
+      if (btnHudTest) {
+        btnHudTest.addEventListener('click', (e) => {
+          e.stopPropagation();
+          pushCaption("For God so loved the world that He gave His only begotten Son.");
+          setTimeout(() => {
+            pushCaption("That whosoever believeth in Him should not perish, but have everlasting life.");
+          }, 900);
+          showHud();
+        });
+      }
+      if (btnHudClear) {
+        btnHudClear.addEventListener('click', (e) => {
+          e.stopPropagation();
+          clearCaptions();
+          showHud();
+        });
+      }
+    }
+
+    // Initialize Active Style and Scale immediately
+    applyStyle(currentStyle);
+    applyScale(currentScale);
+
+    // Global Keybindings for soundboard / testing / style switching
     window.addEventListener('keydown', (e) => {
       const key = e.key.toLowerCase();
-      if (key === 't') {
+      if (key === '1') {
+        applyStyle('broadcast');
+        showHud();
+      } else if (key === '2') {
+        applyStyle('subtitles');
+        showHud();
+      } else if (key === '3') {
+        applyStyle('minimal');
+        showHud();
+      } else if (key === '4') {
+        applyStyle('single');
+        showHud();
+      } else if (key === '5') {
+        applyStyle('crawl');
+        showHud();
+      } else if (key === '[') {
+        applyScale(currentScale - 0.05);
+        showHud();
+      } else if (key === ']') {
+        applyScale(currentScale + 0.05);
+        showHud();
+      } else if (key === 'o' || key === 'h') {
+        isHudForcePinned = !isHudForcePinned;
+        if (isHudForcePinned) {
+          quickSettingsHud.classList.add('visible');
+          if (hudHideTimer) clearTimeout(hudHideTimer);
+        } else {
+          showHud();
+        }
+      } else if (key === 't') {
         pushCaption("Test subtitle caption emitted at " + new Date().toLocaleTimeString());
       } else if (key === 's') {
         showScriptureBadge("Romans 8:28");
